@@ -8,6 +8,61 @@ interface ExcavationReportProps {
   onClose: () => void;
 }
 
+const PERIOD_COLORS: Record<string, string> = {
+  Maastrichtian: "#8B4513",
+  Campanian: "#A0522D",
+  Cenomanian: "#CD853F",
+  Kimmeridgian: "#6B8E23",
+  Tithonian: "#556B2F",
+  Barremian: "#2E8B57",
+  Aptian: "#3CB371",
+  Albian: "#66CDAA",
+  Turonian: "#D2691E",
+  Santonian: "#B8860B",
+  Norian: "#8FBC8F",
+  Carnian: "#9ACD32",
+  Bajocian: "#4682B4",
+  Bathonian: "#5F9EA0",
+  Oxfordian: "#708090",
+  Valanginian: "#20B2AA",
+  Hauterivian: "#48D1CC",
+};
+
+const GROUP_LABELS: Record<string, string> = {
+  theropod: "獸腳類 Theropoda",
+  sauropod: "蜥腳類 Sauropoda",
+  ceratopsian: "角龍類 Ceratopsia",
+  hadrosaur: "鴨嘴龍類 Hadrosauridae",
+  ankylosaur: "甲龍類 Ankylosauria",
+  stegosaur: "劍龍類 Stegosauria",
+  ornithopod: "鳥腳類 Ornithopoda",
+  pachycephalosaur: "厚頭龍類 Pachycephalosauria",
+  ornithomimosaur: "似鳥龍類 Ornithomimosauria",
+  oviraptorosaur: "偷蛋龍類 Oviraptorosauria",
+  bird: "鳥類 Aves",
+  trace: "足跡/蛋化石 Trace Fossil",
+  unknown: "未分類 Unclassified",
+};
+
+function getPeriodColor(period: string): string {
+  return PERIOD_COLORS[period] || "#8B5A2B";
+}
+
+function formatTaxonomy(fossil: Fossil): string[] {
+  const parts: string[] = [];
+  if (fossil.taxonomyClass && fossil.taxonomyClass !== "Unknown")
+    parts.push(`Class: ${fossil.taxonomyClass}`);
+  if (fossil.taxonomyOrder && fossil.taxonomyOrder !== "Unknown" && fossil.taxonomyOrder !== "NO_ORDER_SPECIFIED")
+    parts.push(`Order: ${fossil.taxonomyOrder}`);
+  if (fossil.taxonomyFamily && fossil.taxonomyFamily !== "Unknown" && fossil.taxonomyFamily !== "NO_FAMILY_SPECIFIED")
+    parts.push(`Family: ${fossil.taxonomyFamily}`);
+  if (fossil.taxonomyGenus)
+    parts.push(`Genus: ${fossil.taxonomyGenus}`);
+  if (fossil.taxonomySpecies)
+    parts.push(`Species: ${fossil.taxonomySpecies}`);
+  return parts;
+}
+
 export default function ExcavationReport({
   fossil,
   onClose,
@@ -56,12 +111,15 @@ export default function ExcavationReport({
             <div className="relative p-8 pt-6">
               {/* Report Header */}
               <div className="mb-6">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <span className="font-body text-[10px] text-petra-sienna uppercase tracking-[0.2em] border border-petra-sienna/30 px-2 py-0.5 rounded">
                     Excavation Report
                   </span>
                   <span className="font-body text-[10px] text-petra-fossil uppercase tracking-wider">
-                    {fossil.id}
+                    PBDB-{fossil.id}
+                  </span>
+                  <span className="font-body text-[10px] text-white uppercase tracking-wider bg-petra-sienna/80 px-2 py-0.5 rounded">
+                    {GROUP_LABELS[fossil.group] || fossil.group}
                   </span>
                 </div>
 
@@ -86,30 +144,26 @@ export default function ExcavationReport({
                 <div className="flex-1 h-px bg-petra-sand" />
               </div>
 
-              {/* Specimen Illustration */}
+              {/* Geological Period Badge */}
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2, duration: 0.4 }}
                 className="mb-8 flex justify-center"
               >
-                <div className="w-48 h-48 bg-petra-bone/50 border border-petra-sand rounded-lg flex items-center justify-center relative">
-                  <svg viewBox="0 0 80 100" className="w-32 h-32">
-                    <path
-                      d={fossil.silhouette}
-                      fill="none"
-                      stroke="#3E2723"
-                      strokeWidth="1"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    {/* Dotted reconstruction lines */}
-                    <path
-                      d={fossil.silhouette}
-                      fill="rgba(139, 90, 43, 0.08)"
-                      stroke="none"
-                    />
-                  </svg>
+                <div className="relative bg-petra-bone/50 border border-petra-sand rounded-lg px-8 py-6 text-center">
+                  <span className="font-body text-[10px] text-petra-fossil uppercase tracking-[0.2em] block mb-2">
+                    Geological Period
+                  </span>
+                  <span
+                    className="font-display text-2xl font-bold block mb-1"
+                    style={{ color: getPeriodColor(fossil.period) }}
+                  >
+                    {fossil.period}
+                  </span>
+                  <span className="font-body text-sm text-petra-fossil">
+                    {fossil.age}
+                  </span>
                   {/* Frame corners */}
                   <div className="absolute top-1 left-1 w-4 h-4 border-t-2 border-l-2 border-petra-sienna/30" />
                   <div className="absolute top-1 right-1 w-4 h-4 border-t-2 border-r-2 border-petra-sienna/30" />
@@ -118,25 +172,51 @@ export default function ExcavationReport({
                 </div>
               </motion.div>
 
+              {/* Taxonomy Section */}
+              <div className="mb-8">
+                <h3 className="font-display text-sm text-petra-sienna uppercase tracking-wider mb-3">
+                  Taxonomy
+                </h3>
+                <div className="bg-petra-bone/40 border border-petra-sand/50 rounded px-4 py-3 space-y-1">
+                  {formatTaxonomy(fossil).map((line, i) => (
+                    <div key={i} className="flex gap-2">
+                      <span className="font-body text-[11px] text-petra-fossil w-16 shrink-0">
+                        {line.split(": ")[0]}:
+                      </span>
+                      <span className="font-display text-[13px] text-petra-sepia font-medium italic">
+                        {line.split(": ")[1]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Data Grid */}
               <div className="grid grid-cols-2 gap-4 mb-8">
-                <DataField label="Geological Period" value={fossil.period} />
-                <DataField label="Age" value={fossil.age} />
                 <DataField label="Formation" value={fossil.formation} />
+                <DataField label="Location" value={fossil.location} />
+                <DataField label="Age" value={fossil.age} />
                 <DataField
                   label="Coordinates"
-                  value={`${fossil.coords[1].toFixed(1)}°${fossil.coords[1] >= 0 ? "N" : "S"}, ${Math.abs(fossil.coords[0]).toFixed(1)}°${fossil.coords[0] >= 0 ? "E" : "W"}`}
+                  value={`${Math.abs(fossil.coords[1]).toFixed(1)}°${fossil.coords[1] >= 0 ? "N" : "S"}, ${Math.abs(fossil.coords[0]).toFixed(1)}°${fossil.coords[0] >= 0 ? "E" : "W"}`}
                 />
               </div>
 
-              {/* Summary */}
+              {/* PBDB Link */}
               <div className="mb-8">
-                <h3 className="font-display text-sm text-petra-sienna uppercase tracking-wider mb-3">
-                  Field Notes
-                </h3>
-                <p className="font-body text-sm text-petra-sepia/90 leading-relaxed">
-                  {fossil.summary}
-                </p>
+                <a
+                  href={fossil.pbdbUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-petra-bone/60 border border-petra-sand hover:border-petra-sienna rounded px-4 py-2.5 transition-colors group"
+                >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 text-petra-fossil group-hover:text-petra-sienna transition-colors" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+                  </svg>
+                  <span className="font-body text-xs text-petra-fossil group-hover:text-petra-sienna transition-colors uppercase tracking-wider">
+                    View on Paleobiology Database
+                  </span>
+                </a>
               </div>
 
               {/* Decorative footer */}

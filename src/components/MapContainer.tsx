@@ -3,25 +3,29 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { fossils } from "@/data/fossils";
 import { Fossil } from "@/types/fossil";
-import FossilCard from "./FossilCard";
 import ExcavationReport from "./ExcavationReport";
-import { createRoot } from "react-dom/client";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+
+interface CardMarker {
+  marker: mapboxgl.Marker;
+  id: string;
+}
 
 export default function MapContainer() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<mapboxgl.Marker[]>([]);
+  const popup = useRef<mapboxgl.Popup | null>(null);
+  const cardMarkers = useRef<CardMarker[]>([]);
+  const setSelectedFossilRef = useRef<(f: Fossil | null) => void>(() => {});
   const [projection, setProjection] = useState<"globe" | "mercator">("globe");
   const [terrain, setTerrain] = useState(false);
   const [selectedFossil, setSelectedFossil] = useState<Fossil | null>(null);
+  const [specimenCount, setSpecimenCount] = useState(0);
 
-  const handleFossilSelect = useCallback((fossil: Fossil) => {
-    setSelectedFossil(fossil);
-  }, []);
+  // Keep ref in sync so marker callbacks can access latest setter
+  setSelectedFossilRef.current = setSelectedFossil;
 
   const handleCloseReport = useCallback(() => {
     setSelectedFossil(null);
@@ -45,7 +49,6 @@ export default function MapContainer() {
     const m = map.current;
 
     m.on("style.load", () => {
-      // Sepia-tinted fog for globe atmosphere
       m.setFog({
         color: "rgba(245, 245, 220, 0.8)",
         "high-color": "rgba(210, 180, 140, 0.6)",
@@ -54,7 +57,6 @@ export default function MapContainer() {
         "star-intensity": 0.3,
       });
 
-      // Add raster-dem source for terrain
       if (!m.getSource("mapbox-dem")) {
         m.addSource("mapbox-dem", {
           type: "raster-dem",
@@ -66,40 +68,243 @@ export default function MapContainer() {
     });
 
     m.on("load", () => {
-      // Add fossil markers
-      addMarkers(m);
+      fetch("/data/dinosaurs.geojson")
+        .then((res) => res.json())
+        .then((data) => {
+          setSpecimenCount(data.features?.length ?? 0);
+
+          m.addSource("fossils", {
+            type: "geojson",
+            data,
+            cluster: true,
+            clusterMaxZoom: 14,
+            clusterRadius: 50,
+          });
+
+          // Cluster circles — sized by point_count
+          m.addLayer({
+            id: "clusters",
+            type: "circle",
+            source: "fossils",
+            filter: ["has", "point_count"],
+            paint: {
+              "circle-color": "#8B5A2B",
+              "circle-opacity": 0.85,
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#F5F5DC",
+              "circle-radius": [
+                "step",
+                ["get", "point_count"],
+                16,
+                50, 20,
+                200, 26,
+                1000, 34,
+              ],
+            },
+          });
+
+          // Cluster count labels
+          m.addLayer({
+            id: "cluster-count",
+            type: "symbol",
+            source: "fossils",
+            filter: ["has", "point_count"],
+            layout: {
+              "text-field": ["get", "point_count_abbreviated"],
+              "text-font": ["DIN Pro Medium", "Arial Unicode MS Bold"],
+              "text-size": 12,
+            },
+            paint: {
+              "text-color": "#F5F5DC",
+            },
+          });
+
+          // Unclustered point circles (visible at low zoom, hidden when cards take over)
+          m.addLayer({
+            id: "unclustered-point",
+            type: "circle",
+            source: "fossils",
+            filter: ["!", ["has", "point_count"]],
+            maxzoom: 4,
+            paint: {
+              "circle-color": "#8B5A2B",
+              "circle-opacity": 0.85,
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#F5F5DC",
+              "circle-radius": 16,
+            },
+          });
+
+          // Unclustered point "1" label
+          m.addLayer({
+            id: "unclustered-count",
+            type: "symbol",
+            source: "fossils",
+            filter: ["!", ["has", "point_count"]],
+            maxzoom: 4,
+            layout: {
+              "text-field": "1",
+              "text-font": ["DIN Pro Medium", "Arial Unicode MS Bold"],
+              "text-size": 12,
+            },
+            paint: {
+              "text-color": "#F5F5DC",
+            },
+          });
+
+          // Click on cluster → zoom in
+          m.on("click", "clusters", (e) => {
+            const features = m.queryRenderedFeatures(e.point, {
+              layers: ["clusters"],
+            });
+            if (!features.length) return;
+            const clusterId = features[0].properties?.cluster_id;
+            const source = m.getSource("fossils") as mapboxgl.GeoJSONSource;
+            source.getClusterExpansionZoom(clusterId, (err, zoom) => {
+              if (err) return;
+              const geometry = features[0].geometry;
+              if (geometry.type !== "Point") return;
+              m.easeTo({
+                center: geometry.coordinates as [number, number],
+                zoom: zoom!,
+              });
+            });
+          });
+
+          // Click on unclustered circle → zoom to card level
+          m.on("click", "unclustered-point", (e) => {
+            if (!e.features?.length) return;
+            const geometry = e.features[0].geometry;
+            if (geometry.type !== "Point") return;
+            m.easeTo({
+              center: geometry.coordinates as [number, number],
+              zoom: 5,
+            });
+          });
+
+          // Cursor on clusters & unclustered circles
+          m.on("mouseenter", "clusters", () => {
+            m.getCanvas().style.cursor = "pointer";
+          });
+          m.on("mouseleave", "clusters", () => {
+            m.getCanvas().style.cursor = "";
+          });
+          m.on("mouseenter", "unclustered-point", () => {
+            m.getCanvas().style.cursor = "pointer";
+          });
+          m.on("mouseleave", "unclustered-point", () => {
+            m.getCanvas().style.cursor = "";
+          });
+
+          // Update card markers on every render
+          m.on("render", () => updateCardMarkers(m));
+          updateCardMarkers(m);
+        });
     });
 
     return () => {
-      markersRef.current.forEach((marker) => marker.remove());
+      cardMarkers.current.forEach((cm) => cm.marker.remove());
+      cardMarkers.current = [];
       m.remove();
       map.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function addMarkers(m: mapboxgl.Map) {
-    markersRef.current.forEach((marker) => marker.remove());
-    markersRef.current = [];
+  function updateCardMarkers(m: mapboxgl.Map) {
+    if (!m.getSource("fossils")) return;
 
-    fossils.forEach((fossil) => {
+    // Only show card markers when zoomed in past the circle layers
+    if (m.getZoom() < 4) {
+      // Remove all card markers at low zoom
+      cardMarkers.current.forEach((cm) => cm.marker.remove());
+      cardMarkers.current = [];
+      return;
+    }
+
+    // Query all visible unclustered features
+    const features = m.querySourceFeatures("fossils", {
+      filter: ["!", ["has", "point_count"]],
+    });
+
+    // Deduplicate by id (querySourceFeatures can return dupes across tiles)
+    const seen = new Set<string>();
+    const unique: typeof features = [];
+    for (const f of features) {
+      const id = f.properties?.id;
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        unique.push(f);
+      }
+    }
+
+    // Build set of currently visible ids
+    const visibleIds = new Set(unique.map((f) => f.properties?.id));
+
+    // Remove markers that are no longer visible
+    cardMarkers.current = cardMarkers.current.filter((cm) => {
+      if (!visibleIds.has(cm.id)) {
+        cm.marker.remove();
+        return false;
+      }
+      return true;
+    });
+
+    // Build set of existing marker ids
+    const existingIds = new Set(cardMarkers.current.map((cm) => cm.id));
+
+    // Add new markers for newly visible features
+    for (const f of unique) {
+      const props = f.properties!;
+      const id = props.id;
+      if (existingIds.has(id)) continue;
+
+      const geometry = f.geometry;
+      if (geometry.type !== "Point") continue;
+      const coords = geometry.coordinates as [number, number];
+
+      const abbr = (props.commonName || props.name || "").slice(0, 2).toUpperCase();
+
+      // Build card marker as plain DOM
       const el = document.createElement("div");
-      el.className = "petra-marker";
+      el.className = "petra-card-marker";
+      el.innerHTML = `
+        <div class="petra-card-inner">
+          <span class="petra-card-abbr">${abbr}</span>
+        </div>
+        <div class="petra-card-label">${props.name || ""}</div>
+      `;
 
-      const root = createRoot(el);
-      root.render(
-        <FossilCard fossil={fossil} onClick={() => handleFossilSelect(fossil)} />
-      );
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setSelectedFossilRef.current({
+          id: props.id,
+          name: props.name,
+          commonName: props.commonName,
+          coords,
+          period: props.period,
+          age: props.age,
+          formation: props.formation,
+          location: props.location,
+          group: props.group,
+          taxonomyClass: props.taxonomyClass,
+          taxonomyOrder: props.taxonomyOrder,
+          taxonomyFamily: props.taxonomyFamily,
+          taxonomyGenus: props.taxonomyGenus,
+          taxonomySpecies: props.taxonomySpecies,
+          pbdbUrl: props.pbdbUrl,
+        });
+      });
 
       const marker = new mapboxgl.Marker({
         element: el,
         anchor: "center",
       })
-        .setLngLat(fossil.coords)
+        .setLngLat(coords)
         .addTo(m);
 
-      markersRef.current.push(marker);
-    });
+      cardMarkers.current.push({ marker, id });
+    }
   }
 
   // Handle projection toggle
@@ -176,8 +381,24 @@ export default function MapContainer() {
         <span className="font-body text-xs text-petra-fossil uppercase tracking-wider">
           Specimens:{" "}
           <span className="font-display text-petra-sienna font-bold">
-            {fossils.length}
+            {specimenCount.toLocaleString()}
           </span>
+        </span>
+      </div>
+
+      {/* PBDB Attribution */}
+      <div className="absolute bottom-6 right-6 z-10 bg-petra-parchment/80 backdrop-blur-sm border border-petra-sand rounded px-3 py-1.5">
+        <span className="font-body text-[10px] text-petra-fossil">
+          Data:{" "}
+          <a
+            href="https://paleobiodb.org"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-petra-sienna"
+          >
+            Paleobiology Database
+          </a>{" "}
+          (CC BY 4.0)
         </span>
       </div>
 

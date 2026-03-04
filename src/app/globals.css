@@ -48,6 +48,66 @@
   z-index: 10;
 }
 
+/* Fossil card markers (unclustered points at high zoom) */
+.petra-card-marker {
+  cursor: pointer;
+  z-index: 1;
+  transition: transform 0.3s, z-index 0s;
+}
+.petra-card-marker:hover {
+  z-index: 10;
+  transform: scale(1.1) translateY(-4px);
+}
+.petra-card-inner {
+  width: 56px;
+  height: 56px;
+  background: #F5F5DC;
+  border: 2px solid #D2B48C;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(62, 39, 35, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.petra-card-marker:hover .petra-card-inner {
+  border-color: #8B5A2B;
+  box-shadow: 0 8px 24px rgba(62, 39, 35, 0.25);
+}
+.petra-card-abbr {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #3E2723;
+  transition: color 0.3s;
+}
+.petra-card-marker:hover .petra-card-abbr {
+  color: #8B5A2B;
+}
+.petra-card-label {
+  margin-top: 4px;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+.petra-card-marker:hover .petra-card-label {
+  opacity: 1;
+}
+.petra-card-label {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 9px;
+  font-style: italic;
+  color: #3E2723;
+  background: rgba(245, 245, 220, 0.9);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(210, 180, 140, 0.5);
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
 /* Custom scrollbar for report panel */
 .overflow-y-auto::-webkit-scrollbar {
   width: 6px;

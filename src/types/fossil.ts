@@ -6,6 +6,12 @@ export interface Fossil {
   period: string;
   age: string;
   formation: string;
-  summary: string;
-  silhouette: string; // SVG path data for the dinosaur silhouette
+  location: string;
+  group: string;
+  taxonomyClass: string;
+  taxonomyOrder: string;
+  taxonomyFamily: string;
+  taxonomyGenus: string;
+  taxonomySpecies: string;
+  pbdbUrl: string;
 }
