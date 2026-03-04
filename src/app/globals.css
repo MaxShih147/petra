@@ -1,0 +1,66 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-petra-parchment text-petra-sepia antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  ::selection {
+    @apply bg-petra-sienna/20 text-petra-sepia;
+  }
+}
+
+/* Mapbox style overrides for archaeological aesthetic */
+.mapboxgl-canvas {
+  filter: sepia(15%) saturate(85%) brightness(98%);
+}
+
+.mapboxgl-ctrl-attrib,
+.mapboxgl-ctrl-logo {
+  opacity: 0.5;
+}
+
+.mapboxgl-ctrl-group {
+  @apply !bg-petra-parchment/95 !border-petra-sand !shadow-card;
+  backdrop-filter: blur(8px);
+}
+
+.mapboxgl-ctrl-group button {
+  @apply !border-petra-sand/50;
+}
+
+.mapboxgl-ctrl-group button:hover {
+  @apply !bg-petra-bone;
+}
+
+/* Marker container */
+.petra-marker {
+  cursor: pointer;
+  z-index: 1;
+}
+
+.petra-marker:hover {
+  z-index: 10;
+}
+
+/* Custom scrollbar for report panel */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  @apply bg-petra-sand rounded-full;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+  @apply bg-petra-sienna-light;
+}
