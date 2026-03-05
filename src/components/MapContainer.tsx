@@ -5,6 +5,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Fossil } from "@/types/fossil";
 import ExcavationReport from "./ExcavationReport";
+import { getSilhouette } from "@/lib/dinoSilhouettes";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
@@ -414,12 +415,16 @@ export default function MapContainer() {
 
       const abbr = (props.commonName || props.name || "").slice(0, 2).toUpperCase();
       const groupColor = GROUP_COLOR_MAP[props.group] || "#8B5A2B";
+      const silhouettePath = getSilhouette(props.group);
 
       // Build card marker as plain DOM
       const el = document.createElement("div");
       el.className = "petra-card-marker";
       el.innerHTML = `
         <div class="petra-card-inner" style="border-color: ${groupColor};">
+          <svg class="petra-card-silhouette" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="${silhouettePath}" fill="currentColor"/>
+          </svg>
           <span class="petra-card-abbr" style="color: ${groupColor};">${abbr}</span>
         </div>
         <div class="petra-card-label">${props.name || ""}</div>
