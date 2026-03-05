@@ -9,20 +9,20 @@ import { getSilhouette } from "@/lib/dinoSilhouettes";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
-const GROUP_CONFIG: { key: string; label: string; icon: string; color: string }[] = [
-  { key: "theropod", label: "獸腳類", icon: "🦖", color: "#B44D2E" },
-  { key: "sauropod", label: "蜥腳類", icon: "🦕", color: "#6B8E23" },
-  { key: "ceratopsian", label: "角龍類", icon: "🛡", color: "#8B6914" },
-  { key: "hadrosaur", label: "鴨嘴龍", icon: "🦆", color: "#2E8B57" },
-  { key: "ankylosaur", label: "甲龍類", icon: "🪨", color: "#708090" },
-  { key: "stegosaur", label: "劍龍類", icon: "⚔", color: "#8B4513" },
-  { key: "ornithopod", label: "鳥腳類", icon: "🐾", color: "#CD853F" },
-  { key: "pachycephalosaur", label: "厚頭龍", icon: "💀", color: "#9370DB" },
-  { key: "ornithomimosaur", label: "似鳥龍", icon: "🏃", color: "#D2691E" },
-  { key: "oviraptorosaur", label: "偷蛋龍", icon: "🥚", color: "#DB7093" },
-  { key: "bird", label: "鳥類", icon: "🐦", color: "#4682B4" },
-  { key: "trace", label: "足跡/蛋", icon: "👣", color: "#A0522D" },
-  { key: "unknown", label: "未分類", icon: "❓", color: "#999" },
+const GROUP_CONFIG: { key: string; label: string; color: string }[] = [
+  { key: "theropod", label: "獸腳類", color: "#B44D2E" },
+  { key: "sauropod", label: "蜥腳類", color: "#6B8E23" },
+  { key: "ceratopsian", label: "角龍類", color: "#8B6914" },
+  { key: "hadrosaur", label: "鴨嘴龍", color: "#2E8B57" },
+  { key: "ankylosaur", label: "甲龍類", color: "#708090" },
+  { key: "stegosaur", label: "劍龍類", color: "#8B4513" },
+  { key: "ornithopod", label: "鳥腳類", color: "#CD853F" },
+  { key: "pachycephalosaur", label: "厚頭龍", color: "#9370DB" },
+  { key: "ornithomimosaur", label: "似鳥龍", color: "#D2691E" },
+  { key: "oviraptorosaur", label: "偷蛋龍", color: "#DB7093" },
+  { key: "bird", label: "鳥類", color: "#4682B4" },
+  { key: "trace", label: "足跡/蛋", color: "#A0522D" },
+  { key: "unknown", label: "未分類", color: "#999" },
 ];
 
 const ALL_GROUPS = new Set(GROUP_CONFIG.map((g) => g.key));
@@ -415,16 +415,14 @@ export default function MapContainer() {
 
       const abbr = (props.commonName || props.name || "").slice(0, 2).toUpperCase();
       const groupColor = GROUP_COLOR_MAP[props.group] || "#8B5A2B";
-      const silhouettePath = getSilhouette(props.group);
+      const silhouetteUrl = getSilhouette(props.group);
 
       // Build card marker as plain DOM
       const el = document.createElement("div");
       el.className = "petra-card-marker";
       el.innerHTML = `
         <div class="petra-card-inner" style="border-color: ${groupColor};">
-          <svg class="petra-card-silhouette" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="${silhouettePath}" fill="currentColor"/>
-          </svg>
+          <img class="petra-card-silhouette${props.group === "trace" || props.group === "unknown" ? "" : " petra-card-silhouette-lg"}" src="${silhouetteUrl}" alt="" aria-hidden="true" />
           <span class="petra-card-abbr" style="color: ${groupColor};">${abbr}</span>
         </div>
         <div class="petra-card-label">${props.name || ""}</div>
@@ -691,7 +689,12 @@ export default function MapContainer() {
                       }`}
                       style={active ? { borderColor: g.color } : {}}
                     >
-                      <span className="text-base leading-none">{g.icon}</span>
+                      <img
+                        src={getSilhouette(g.key)}
+                        alt=""
+                        className={`shrink-0 ${g.key === "trace" || g.key === "unknown" ? "w-5 h-5" : "w-6 h-6"}`}
+                        style={{ filter: active ? `brightness(0) saturate(100%) opacity(0.7)` : undefined }}
+                      />
                       <span className="font-body text-[12px] text-petra-sepia">{g.label}</span>
                       <span className="font-body text-[10px] text-petra-fossil/40 ml-auto">
                         {count.toLocaleString()}

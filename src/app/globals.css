@@ -78,12 +78,17 @@
 .petra-card-silhouette {
   width: 30px;
   height: 30px;
-  color: rgba(139, 90, 43, 0.25);
-  transition: color 0.3s;
+  opacity: 0.25;
+  filter: sepia(1) brightness(0.4);
+  transition: opacity 0.3s;
   flex-shrink: 0;
 }
+.petra-card-silhouette-lg {
+  width: 33px;
+  height: 33px;
+}
 .petra-card-marker:hover .petra-card-silhouette {
-  color: rgba(139, 90, 43, 0.4);
+  opacity: 0.4;
 }
 .petra-card-abbr {
   font-family: "Inter", system-ui, sans-serif;

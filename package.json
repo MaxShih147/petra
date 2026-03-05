@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "fetch-data": "npx tsx scripts/fetch-pbdb.ts"
+    "fetch-data": "npx tsx scripts/fetch-pbdb.ts",
+    "fetch-silhouettes": "npx tsx scripts/fetch-silhouettes.ts"
   },
   "dependencies": {
     "framer-motion": "^11.18.0",
@@ -23,6 +24,7 @@
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.1.0",
     "postcss": "^8.4.49",
+    "svgo": "^4.0.1",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.7.0",
     "typescript": "5.9.3"
