@@ -10,24 +10,25 @@ interface ExcavationReportProps {
   onClose: () => void;
 }
 
+// ICS standard colors (from International Commission on Stratigraphy via PBDB)
 const PERIOD_COLORS: Record<string, string> = {
-  Maastrichtian: "#8B4513",
-  Campanian: "#A0522D",
-  Cenomanian: "#CD853F",
-  Kimmeridgian: "#6B8E23",
-  Tithonian: "#556B2F",
-  Barremian: "#2E8B57",
-  Aptian: "#3CB371",
-  Albian: "#66CDAA",
-  Turonian: "#D2691E",
-  Santonian: "#B8860B",
-  Norian: "#8FBC8F",
-  Carnian: "#9ACD32",
-  Bajocian: "#4682B4",
-  Bathonian: "#5F9EA0",
-  Oxfordian: "#708090",
-  Valanginian: "#20B2AA",
-  Hauterivian: "#48D1CC",
+  Maastrichtian: "#F2FA8C",
+  Campanian: "#E6F47F",
+  Cenomanian: "#B3DE53",
+  Kimmeridgian: "#CCECF4",
+  Tithonian: "#D9F1F7",
+  Barremian: "#B3DF7F",
+  Aptian: "#BFE48A",
+  Albian: "#CCEA97",
+  Turonian: "#BFE35D",
+  Santonian: "#D9EF74",
+  Norian: "#D6AAD3",
+  Carnian: "#C99BCB",
+  Bajocian: "#A6DDE0",
+  Bathonian: "#B3E2E3",
+  Oxfordian: "#BFE7F1",
+  Valanginian: "#99D36A",
+  Hauterivian: "#A6D975",
 };
 
 const GROUP_SILHOUETTE_COLORS: Record<string, string> = {
@@ -172,17 +173,17 @@ export default function ExcavationReport({
                 transition={{ delay: 0.2, duration: 0.4 }}
                 className="mb-8 flex justify-center"
               >
-                <div className="relative bg-petra-bone/50 border border-petra-sand rounded-lg px-8 py-6 text-center">
-                  <span className="font-body text-[10px] text-petra-fossil uppercase tracking-[0.2em] block mb-2">
+                <div
+                  className="relative border border-petra-sand/60 rounded-lg px-8 py-6 text-center"
+                  style={{ backgroundColor: getPeriodColor(fossil.period) + "88" }}
+                >
+                  <span className="font-body text-[10px] text-petra-sepia/70 uppercase tracking-[0.2em] block mb-2">
                     Geological Period
                   </span>
-                  <span
-                    className="font-display text-2xl font-bold block mb-1"
-                    style={{ color: getPeriodColor(fossil.period) }}
-                  >
+                  <span className="font-display text-2xl font-bold block mb-1 text-petra-sepia">
                     {fossil.period}
                   </span>
-                  <span className="font-body text-sm text-petra-fossil">
+                  <span className="font-body text-sm text-petra-sepia/70">
                     {fossil.age}
                   </span>
                   {/* Frame corners */}
