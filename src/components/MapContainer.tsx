@@ -422,7 +422,7 @@ export default function MapContainer() {
       el.className = "petra-card-marker";
       el.innerHTML = `
         <div class="petra-card-inner" style="border-color: ${groupColor};">
-          <img class="petra-card-silhouette${props.group === "trace" || props.group === "unknown" ? "" : " petra-card-silhouette-lg"}" src="${silhouetteUrl}" alt="" aria-hidden="true" />
+          <div class="petra-card-silhouette${props.group === "trace" || props.group === "unknown" ? "" : " petra-card-silhouette-lg"}" style="background-color: ${groupColor}; -webkit-mask-image: url(${silhouetteUrl}); mask-image: url(${silhouetteUrl});" aria-hidden="true"></div>
           <span class="petra-card-abbr" style="color: ${groupColor};">${abbr}</span>
         </div>
         <div class="petra-card-label">${props.name || ""}</div>

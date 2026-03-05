@@ -78,17 +78,22 @@
 .petra-card-silhouette {
   width: 30px;
   height: 30px;
-  opacity: 0.25;
-  filter: sepia(1) brightness(0.4);
+  opacity: 1;
   transition: opacity 0.3s;
   flex-shrink: 0;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 .petra-card-silhouette-lg {
   width: 33px;
   height: 33px;
 }
 .petra-card-marker:hover .petra-card-silhouette {
-  opacity: 0.4;
+  opacity: 1;
 }
 .petra-card-abbr {
   font-family: "Inter", system-ui, sans-serif;
