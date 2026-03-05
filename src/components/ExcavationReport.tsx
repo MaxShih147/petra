@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Fossil } from "@/types/fossil";
 import { motion, AnimatePresence } from "framer-motion";
+import { useDinoImage } from "@/lib/imageResolver";
 
 interface ExcavationReportProps {
   fossil: Fossil | null;
@@ -26,6 +28,22 @@ const PERIOD_COLORS: Record<string, string> = {
   Oxfordian: "#708090",
   Valanginian: "#20B2AA",
   Hauterivian: "#48D1CC",
+};
+
+const GROUP_SILHOUETTE_COLORS: Record<string, string> = {
+  theropod: "#B44D2E",
+  sauropod: "#6B8E23",
+  ceratopsian: "#8B6914",
+  hadrosaur: "#2E8B57",
+  ankylosaur: "#708090",
+  stegosaur: "#8B4513",
+  ornithopod: "#CD853F",
+  pachycephalosaur: "#9370DB",
+  ornithomimosaur: "#D2691E",
+  oviraptorosaur: "#DB7093",
+  bird: "#4682B4",
+  trace: "#A0522D",
+  unknown: "#999",
 };
 
 const GROUP_LABELS: Record<string, string> = {
@@ -131,6 +149,9 @@ export default function ExcavationReport({
                 </p>
               </div>
 
+              {/* Dinosaur Image */}
+              <ReportImage genus={fossil.taxonomyGenus || fossil.commonName} group={fossil.group} />
+
               {/* Decorative divider */}
               <div className="flex items-center gap-3 mb-6">
                 <div className="flex-1 h-px bg-petra-sand" />
@@ -232,6 +253,78 @@ export default function ExcavationReport({
         </>
       )}
     </AnimatePresence>
+  );
+}
+
+function ReportImage({ genus, group }: { genus: string; group: string }) {
+  const { url, loading } = useDinoImage(genus);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const groupColor = GROUP_SILHOUETTE_COLORS[group] || "#8B5A2B";
+
+  if (loading) {
+    return (
+      <div className="mb-6">
+        <div className="petra-report-image-shimmer h-48 rounded-lg bg-petra-bone animate-pulse" />
+      </div>
+    );
+  }
+
+  if (url) {
+    return (
+      <div className="mb-6">
+        <div className="relative overflow-hidden rounded-lg border border-petra-sand bg-petra-bone/30">
+          {!imgLoaded && (
+            <div className="h-48 bg-petra-bone animate-pulse" />
+          )}
+          <motion.img
+            src={url}
+            alt={genus}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: imgLoaded ? 1 : 0 }}
+            transition={{ duration: 0.4 }}
+            onLoad={() => setImgLoaded(true)}
+            className="petra-report-image w-full max-h-52 object-cover"
+          />
+        </div>
+        <a
+          href={`https://en.wikipedia.org/wiki/${encodeURIComponent(genus)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1.5 inline-flex items-center gap-1 font-body text-[10px] text-petra-fossil/60 hover:text-petra-sienna transition-colors"
+        >
+          <svg viewBox="0 0 16 16" className="w-3 h-3" fill="currentColor">
+            <path d="M4.002 3.5a.5.5 0 01.5-.5h7a.5.5 0 01.5.5v9a.5.5 0 01-.998.064L8 7.694 4.998 12.564A.5.5 0 014.002 12.5v-9z" />
+          </svg>
+          Image: Wikimedia Commons
+        </a>
+      </div>
+    );
+  }
+
+  // Fallback: PhyloPic silhouette
+  return (
+    <div className="mb-6">
+      <div className="petra-report-image-fallback relative overflow-hidden rounded-lg border border-petra-sand h-48 flex items-center justify-center">
+        <div
+          className="w-24 h-24"
+          style={{
+            WebkitMaskImage: `url(/silhouettes/${group}.svg)`,
+            maskImage: `url(/silhouettes/${group}.svg)`,
+            WebkitMaskSize: "contain",
+            maskSize: "contain",
+            WebkitMaskRepeat: "no-repeat",
+            maskRepeat: "no-repeat",
+            WebkitMaskPosition: "center",
+            maskPosition: "center",
+            backgroundColor: groupColor,
+            opacity: 0.5,
+          }}
+        />
+      </div>
+      <span className="mt-1.5 block font-body text-[10px] text-petra-fossil/40 italic">
+        Illustration unavailable — silhouette shown
+      </span>
+    </div>
   );
 }
 

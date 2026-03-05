@@ -125,6 +125,38 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
+/* Report image styles */
+.petra-report-image {
+  filter: saturate(0.85) contrast(1.05);
+}
+
+.petra-report-image-fallback {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      rgba(139, 90, 43, 0.02) 2px,
+      transparent 4px
+    ),
+    linear-gradient(135deg, #F5F5DC 0%, #EDE4D0 100%);
+}
+
+.petra-report-image-shimmer {
+  background: linear-gradient(
+    90deg,
+    #EDE4D0 25%,
+    #F5F0E0 50%,
+    #EDE4D0 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Custom scrollbar for report panel */
 .overflow-y-auto::-webkit-scrollbar {
   width: 6px;
