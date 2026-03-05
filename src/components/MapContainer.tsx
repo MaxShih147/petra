@@ -8,21 +8,132 @@ import ExcavationReport from "./ExcavationReport";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
-interface CardMarker {
+const GROUP_CONFIG: { key: string; label: string; icon: string; color: string }[] = [
+  { key: "theropod", label: "獸腳類", icon: "🦖", color: "#B44D2E" },
+  { key: "sauropod", label: "蜥腳類", icon: "🦕", color: "#6B8E23" },
+  { key: "ceratopsian", label: "角龍類", icon: "🛡", color: "#8B6914" },
+  { key: "hadrosaur", label: "鴨嘴龍", icon: "🦆", color: "#2E8B57" },
+  { key: "ankylosaur", label: "甲龍類", icon: "🪨", color: "#708090" },
+  { key: "stegosaur", label: "劍龍類", icon: "⚔", color: "#8B4513" },
+  { key: "ornithopod", label: "鳥腳類", icon: "🐾", color: "#CD853F" },
+  { key: "pachycephalosaur", label: "厚頭龍", icon: "💀", color: "#9370DB" },
+  { key: "ornithomimosaur", label: "似鳥龍", icon: "🏃", color: "#D2691E" },
+  { key: "oviraptorosaur", label: "偷蛋龍", icon: "🥚", color: "#DB7093" },
+  { key: "bird", label: "鳥類", icon: "🐦", color: "#4682B4" },
+  { key: "trace", label: "足跡/蛋", icon: "👣", color: "#A0522D" },
+  { key: "unknown", label: "未分類", icon: "❓", color: "#999" },
+];
+
+const ALL_GROUPS = new Set(GROUP_CONFIG.map((g) => g.key));
+const GROUP_COLOR_MAP: Record<string, string> = Object.fromEntries(
+  GROUP_CONFIG.map((g) => [g.key, g.color])
+);
+// Mapbox match expression for group → color
+const GROUP_COLOR_EXPR: mapboxgl.Expression = [
+  "match",
+  ["get", "group"],
+  ...GROUP_CONFIG.flatMap((g) => [g.key, g.color]),
+  "#8B5A2B", // fallback
+];
+
+type FamilyMap = Record<string, { name: string; count: number }[]>;
+
+function resolveFamily(props: Record<string, string>): string {
+  const fam = props.taxonomyFamily;
+  if (fam && fam !== "NO_FAMILY_SPECIFIED" && fam !== "Unknown" && fam !== "")
+    return fam;
+  const ord = props.taxonomyOrder;
+  if (ord && ord !== "NO_ORDER_SPECIFIED" && ord !== "Unknown" && ord !== "")
+    return ord;
+  return "Other";
+}
+
+function buildFamilyMap(features: GeoJSON.Feature[]): FamilyMap {
+  const map: Record<string, Record<string, number>> = {};
+  for (const f of features) {
+    const props = f.properties as Record<string, string>;
+    const group = props.group;
+    const family = resolveFamily(props);
+    if (!map[group]) map[group] = {};
+    map[group][family] = (map[group][family] || 0) + 1;
+  }
+  const result: FamilyMap = {};
+  for (const [group, families] of Object.entries(map)) {
+    result[group] = Object.entries(families)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }
+  return result;
+}
+
+interface TrackedMarker {
   marker: mapboxgl.Marker;
   id: string;
+}
+
+function createPieSvg(props: Record<string, unknown>, size: number): string {
+  const counts: { color: string; count: number }[] = [];
+  for (const g of GROUP_CONFIG) {
+    const c = (props[`c_${g.key}`] as number) || 0;
+    if (c > 0) counts.push({ color: g.color, count: c });
+  }
+  const total = counts.reduce((s, c) => s + c.count, 0);
+  if (total === 0) return "";
+
+  const r = size / 2;
+  let cumulative = 0;
+  const paths: string[] = [];
+
+  if (counts.length === 1) {
+    paths.push(`<circle cx="${r}" cy="${r}" r="${r}" fill="${counts[0].color}" opacity="0.85"/>`);
+  } else {
+    for (const seg of counts) {
+      const start = cumulative / total;
+      const end = (cumulative + seg.count) / total;
+      cumulative += seg.count;
+
+      const startAngle = start * 2 * Math.PI - Math.PI / 2;
+      const endAngle = end * 2 * Math.PI - Math.PI / 2;
+      const largeArc = seg.count / total > 0.5 ? 1 : 0;
+
+      const x1 = r + r * Math.cos(startAngle);
+      const y1 = r + r * Math.sin(startAngle);
+      const x2 = r + r * Math.cos(endAngle);
+      const y2 = r + r * Math.sin(endAngle);
+
+      paths.push(
+        `<path d="M${r},${r} L${x1},${y1} A${r},${r} 0 ${largeArc} 1 ${x2},${y2} Z" fill="${seg.color}" opacity="0.85"/>`
+      );
+    }
+  }
+
+  const pointCount = props.point_count_abbreviated || props.point_count || total;
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+    ${paths.join("")}
+    <circle cx="${r}" cy="${r}" r="${r}" fill="none" stroke="#F5F5DC" stroke-width="2"/>
+    <text x="${r}" y="${r}" text-anchor="middle" dominant-baseline="central" fill="#F5F5DC" font-family="Inter,system-ui,sans-serif" font-size="${size > 50 ? 13 : 11}" font-weight="600">${pointCount}</text>
+  </svg>`;
 }
 
 export default function MapContainer() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const popup = useRef<mapboxgl.Popup | null>(null);
-  const cardMarkers = useRef<CardMarker[]>([]);
+  const cardMarkers = useRef<TrackedMarker[]>([]);
+  const clusterMarkers = useRef<TrackedMarker[]>([]);
+  const fullData = useRef<GeoJSON.FeatureCollection | null>(null);
   const setSelectedFossilRef = useRef<(f: Fossil | null) => void>(() => {});
   const [projection, setProjection] = useState<"globe" | "mercator">("globe");
   const [terrain, setTerrain] = useState(false);
   const [selectedFossil, setSelectedFossil] = useState<Fossil | null>(null);
   const [specimenCount, setSpecimenCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const [activeGroups, setActiveGroups] = useState<Set<string>>(new Set(ALL_GROUPS));
+  const [excludedFamilies, setExcludedFamilies] = useState<Set<string>>(new Set());
+  const [filterOpen, setFilterOpen] = useState(true);
+  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [familyMap, setFamilyMap] = useState<FamilyMap>({});
+  const [groupCounts, setGroupCounts] = useState<Record<string, number>>({});
 
   // Keep ref in sync so marker callbacks can access latest setter
   setSelectedFossilRef.current = setSelectedFossil;
@@ -71,7 +182,26 @@ export default function MapContainer() {
       fetch("/data/dinosaurs.geojson")
         .then((res) => res.json())
         .then((data) => {
-          setSpecimenCount(data.features?.length ?? 0);
+          fullData.current = data;
+          const total = data.features?.length ?? 0;
+          setTotalCount(total);
+          setSpecimenCount(total);
+          setFamilyMap(buildFamilyMap(data.features));
+          const counts: Record<string, number> = {};
+          for (const f of data.features) {
+            const g = (f.properties as Record<string, string>).group;
+            counts[g] = (counts[g] || 0) + 1;
+          }
+          setGroupCounts(counts);
+
+          // Build clusterProperties to count each group
+          const clusterProps: Record<string, mapboxgl.Expression> = {};
+          for (const g of GROUP_CONFIG) {
+            clusterProps[`c_${g.key}`] = [
+              "+",
+              ["case", ["==", ["get", "group"], g.key], 1, 0],
+            ];
+          }
 
           m.addSource("fossils", {
             type: "geojson",
@@ -79,43 +209,18 @@ export default function MapContainer() {
             cluster: true,
             clusterMaxZoom: 14,
             clusterRadius: 50,
+            clusterProperties: clusterProps,
           });
 
-          // Cluster circles — sized by point_count
+          // Hidden cluster layer (needed for querySourceFeatures to work)
           m.addLayer({
             id: "clusters",
             type: "circle",
             source: "fossils",
             filter: ["has", "point_count"],
             paint: {
-              "circle-color": "#8B5A2B",
-              "circle-opacity": 0.85,
-              "circle-stroke-width": 2,
-              "circle-stroke-color": "#F5F5DC",
-              "circle-radius": [
-                "step",
-                ["get", "point_count"],
-                16,
-                50, 20,
-                200, 26,
-                1000, 34,
-              ],
-            },
-          });
-
-          // Cluster count labels
-          m.addLayer({
-            id: "cluster-count",
-            type: "symbol",
-            source: "fossils",
-            filter: ["has", "point_count"],
-            layout: {
-              "text-field": ["get", "point_count_abbreviated"],
-              "text-font": ["DIN Pro Medium", "Arial Unicode MS Bold"],
-              "text-size": 12,
-            },
-            paint: {
-              "text-color": "#F5F5DC",
+              "circle-radius": 0,
+              "circle-opacity": 0,
             },
           });
 
@@ -127,7 +232,7 @@ export default function MapContainer() {
             filter: ["!", ["has", "point_count"]],
             maxzoom: 4,
             paint: {
-              "circle-color": "#8B5A2B",
+              "circle-color": GROUP_COLOR_EXPR,
               "circle-opacity": 0.85,
               "circle-stroke-width": 2,
               "circle-stroke-color": "#F5F5DC",
@@ -152,25 +257,6 @@ export default function MapContainer() {
             },
           });
 
-          // Click on cluster → zoom in
-          m.on("click", "clusters", (e) => {
-            const features = m.queryRenderedFeatures(e.point, {
-              layers: ["clusters"],
-            });
-            if (!features.length) return;
-            const clusterId = features[0].properties?.cluster_id;
-            const source = m.getSource("fossils") as mapboxgl.GeoJSONSource;
-            source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-              if (err) return;
-              const geometry = features[0].geometry;
-              if (geometry.type !== "Point") return;
-              m.easeTo({
-                center: geometry.coordinates as [number, number],
-                zoom: zoom!,
-              });
-            });
-          });
-
           // Click on unclustered circle → zoom to card level
           m.on("click", "unclustered-point", (e) => {
             if (!e.features?.length) return;
@@ -182,13 +268,7 @@ export default function MapContainer() {
             });
           });
 
-          // Cursor on clusters & unclustered circles
-          m.on("mouseenter", "clusters", () => {
-            m.getCanvas().style.cursor = "pointer";
-          });
-          m.on("mouseleave", "clusters", () => {
-            m.getCanvas().style.cursor = "";
-          });
+          // Cursor on unclustered circles
           m.on("mouseenter", "unclustered-point", () => {
             m.getCanvas().style.cursor = "pointer";
           });
@@ -196,13 +276,19 @@ export default function MapContainer() {
             m.getCanvas().style.cursor = "";
           });
 
-          // Update card markers on every render
-          m.on("render", () => updateCardMarkers(m));
+          // Update markers on every render
+          m.on("render", () => {
+            updateClusterMarkers(m);
+            updateCardMarkers(m);
+          });
+          updateClusterMarkers(m);
           updateCardMarkers(m);
         });
     });
 
     return () => {
+      clusterMarkers.current.forEach((cm) => cm.marker.remove());
+      clusterMarkers.current = [];
       cardMarkers.current.forEach((cm) => cm.marker.remove());
       cardMarkers.current = [];
       m.remove();
@@ -210,6 +296,69 @@ export default function MapContainer() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function updateClusterMarkers(m: mapboxgl.Map) {
+    if (!m.getSource("fossils")) return;
+
+    const features = m.querySourceFeatures("fossils", {
+      filter: ["has", "point_count"],
+    });
+
+    // Deduplicate by cluster_id
+    const seen = new Set<number>();
+    const unique: typeof features = [];
+    for (const f of features) {
+      const cid = f.properties?.cluster_id as number;
+      if (cid !== undefined && !seen.has(cid)) {
+        seen.add(cid);
+        unique.push(f);
+      }
+    }
+
+    const visibleIds = new Set(unique.map((f) => String(f.properties?.cluster_id)));
+
+    // Remove markers no longer visible
+    clusterMarkers.current = clusterMarkers.current.filter((cm) => {
+      if (!visibleIds.has(cm.id)) {
+        cm.marker.remove();
+        return false;
+      }
+      return true;
+    });
+
+    const existingIds = new Set(clusterMarkers.current.map((cm) => cm.id));
+
+    for (const f of unique) {
+      const props = f.properties!;
+      const cid = String(props.cluster_id);
+      if (existingIds.has(cid)) continue;
+
+      const geometry = f.geometry;
+      if (geometry.type !== "Point") continue;
+      const coords = geometry.coordinates as [number, number];
+
+      const pointCount = props.point_count as number;
+      const size = pointCount < 50 ? 36 : pointCount < 200 ? 44 : pointCount < 1000 ? 54 : 68;
+
+      const el = document.createElement("div");
+      el.style.cursor = "pointer";
+      el.innerHTML = createPieSvg(props, size);
+
+      el.addEventListener("click", () => {
+        const source = m.getSource("fossils") as mapboxgl.GeoJSONSource;
+        source.getClusterExpansionZoom(props.cluster_id as number, (err, zoom) => {
+          if (err) return;
+          m.easeTo({ center: coords, zoom: zoom! });
+        });
+      });
+
+      const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
+        .setLngLat(coords)
+        .addTo(m);
+
+      clusterMarkers.current.push({ marker, id: cid });
+    }
+  }
 
   function updateCardMarkers(m: mapboxgl.Map) {
     if (!m.getSource("fossils")) return;
@@ -264,13 +413,14 @@ export default function MapContainer() {
       const coords = geometry.coordinates as [number, number];
 
       const abbr = (props.commonName || props.name || "").slice(0, 2).toUpperCase();
+      const groupColor = GROUP_COLOR_MAP[props.group] || "#8B5A2B";
 
       // Build card marker as plain DOM
       const el = document.createElement("div");
       el.className = "petra-card-marker";
       el.innerHTML = `
-        <div class="petra-card-inner">
-          <span class="petra-card-abbr">${abbr}</span>
+        <div class="petra-card-inner" style="border-color: ${groupColor};">
+          <span class="petra-card-abbr" style="color: ${groupColor};">${abbr}</span>
         </div>
         <div class="petra-card-label">${props.name || ""}</div>
       `;
@@ -307,6 +457,97 @@ export default function MapContainer() {
     }
   }
 
+  // Handle group + family filter
+  useEffect(() => {
+    const m = map.current;
+    const data = fullData.current;
+    if (!m || !data) return;
+    const source = m.getSource("fossils") as mapboxgl.GeoJSONSource | undefined;
+    if (!source) return;
+
+    clusterMarkers.current.forEach((cm) => cm.marker.remove());
+    clusterMarkers.current = [];
+    cardMarkers.current.forEach((cm) => cm.marker.remove());
+    cardMarkers.current = [];
+
+    const noGroupFilter = activeGroups.size === ALL_GROUPS.size;
+    const noFamilyFilter = excludedFamilies.size === 0;
+
+    if (noGroupFilter && noFamilyFilter) {
+      source.setData(data);
+      setSpecimenCount(data.features?.length ?? 0);
+    } else {
+      const filtered: GeoJSON.FeatureCollection = {
+        type: "FeatureCollection",
+        features: data.features.filter((f) => {
+          const props = f.properties as Record<string, string>;
+          if (!activeGroups.has(props.group)) return false;
+          if (excludedFamilies.size > 0) {
+            const family = resolveFamily(props);
+            const key = `${props.group}::${family}`;
+            if (excludedFamilies.has(key)) return false;
+          }
+          return true;
+        }),
+      };
+      source.setData(filtered);
+      setSpecimenCount(filtered.features.length);
+    }
+  }, [activeGroups, excludedFamilies]);
+
+  const toggleGroup = useCallback((group: string) => {
+    setActiveGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) {
+        next.delete(group);
+      } else {
+        next.add(group);
+      }
+      return next;
+    });
+    // Clear excluded families for this group when toggling
+    setExcludedFamilies((prev) => {
+      const next = new Set(prev);
+      for (const key of prev) {
+        if (key.startsWith(group + "::")) next.delete(key);
+      }
+      return next.size === prev.size ? prev : next;
+    });
+  }, []);
+
+  const toggleFamily = useCallback((group: string, family: string) => {
+    const key = `${group}::${family}`;
+    setExcludedFamilies((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      // If all families in this group are now excluded, turn off the group
+      const families = familyMap[group] || [];
+      const allExcluded = families.every((f) => next.has(`${group}::${f.name}`));
+      if (allExcluded) {
+        setActiveGroups((prev) => {
+          const g = new Set(prev);
+          g.delete(group);
+          return g;
+        });
+        // Clear the excluded families for this group since group is off
+        for (const f of families) {
+          next.delete(`${group}::${f.name}`);
+        }
+      }
+      return next;
+    });
+  }, [familyMap]);
+
+  const selectAllGroups = useCallback(() => {
+    setActiveGroups(new Set(ALL_GROUPS));
+    setExcludedFamilies(new Set());
+  }, []);
+  const clearAllGroups = useCallback(() => setActiveGroups(new Set()), []);
+
   // Handle projection toggle
   useEffect(() => {
     const m = map.current;
@@ -322,7 +563,7 @@ export default function MapContainer() {
     if (!m) return;
     const apply = () => {
       if (terrain) {
-        m.setTerrain({ source: "mapbox-dem", exaggeration: 1.5 });
+        m.setTerrain({ source: "mapbox-dem", exaggeration: 3 });
       } else {
         m.setTerrain(undefined as unknown as mapboxgl.TerrainSpecification);
       }
@@ -336,54 +577,196 @@ export default function MapContainer() {
       <div ref={mapContainer} className="w-full h-full" />
 
       {/* Control Panel */}
-      <div className="absolute top-6 left-6 z-10 flex flex-col gap-3">
-        {/* Logo */}
-        <div className="bg-petra-parchment/95 backdrop-blur-sm border border-petra-sand rounded-lg px-5 py-3 shadow-card">
-          <h1 className="font-display text-2xl font-bold text-petra-sepia tracking-wide">
-            PETRA
-          </h1>
-          <p className="font-body text-xs text-petra-fossil tracking-widest uppercase">
-            The Fossil Atlas
-          </p>
+      <div className="absolute top-6 left-6 z-10 bg-petra-parchment/95 backdrop-blur-sm border border-petra-sand rounded-xl shadow-card overflow-hidden w-[250px] max-h-[calc(100vh-120px)] flex flex-col">
+        {/* Header */}
+        <div className="px-4 pt-4 pb-2.5 flex items-start justify-between shrink-0">
+          <div>
+            <h1 className="font-display text-xl font-bold text-petra-sepia tracking-wide leading-none">
+              PETRA
+            </h1>
+            <p className="font-body text-[9px] text-petra-fossil tracking-[0.2em] uppercase mt-0.5">
+              The Fossil Atlas
+            </p>
+          </div>
+          <button
+            onClick={() =>
+              setProjection((p) => (p === "globe" ? "mercator" : "globe"))
+            }
+            className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-petra-bone/60 transition-colors"
+            title={`Switch to ${projection === "globe" ? "2D Mercator" : "3D Globe"}`}
+          >
+            {projection === "globe" ? (
+              <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 text-petra-fossil" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="10" cy="10" r="7.5" />
+                <ellipse cx="10" cy="10" rx="3" ry="7.5" />
+                <path d="M3 7.5h14M3 12.5h14" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 text-petra-fossil" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <rect x="2.5" y="4" width="15" height="12" rx="1" />
+                <path d="M10 4v12M2.5 10h15" />
+              </svg>
+            )}
+            <span className="font-body text-[11px] text-petra-fossil">
+              {projection === "globe" ? "Globe" : "Flat"}
+            </span>
+          </button>
         </div>
 
-        {/* Projection Toggle */}
-        <button
-          onClick={() =>
-            setProjection((p) => (p === "globe" ? "mercator" : "globe"))
-          }
-          className="bg-petra-parchment/95 backdrop-blur-sm border border-petra-sand rounded-lg px-4 py-2.5 shadow-card hover:shadow-card-hover transition-all duration-300 text-left group"
-        >
-          <span className="font-body text-xs text-petra-fossil uppercase tracking-wider block">
-            Projection
+        {/* Specimen count bar */}
+        <div className="px-4 py-2 bg-petra-bone/40 border-y border-petra-sand/40 shrink-0">
+          <span className="font-body text-[11px] text-petra-fossil">
+            Showing{" "}
+            <span className="font-display font-bold text-petra-sienna">
+              {specimenCount.toLocaleString()}
+            </span>
+            {(activeGroups.size < ALL_GROUPS.size || excludedFamilies.size > 0) && (
+              <span className="text-petra-fossil/60"> / {totalCount.toLocaleString()}</span>
+            )}
+            {" "}specimens
           </span>
-          <span className="font-display text-sm text-petra-sepia group-hover:text-petra-sienna transition-colors">
-            {projection === "globe" ? "3D Globe" : "2D Mercator"}
-          </span>
-        </button>
+        </div>
 
-        {/* Terrain Toggle */}
-        <button
-          onClick={() => setTerrain((t) => !t)}
-          className="bg-petra-parchment/95 backdrop-blur-sm border border-petra-sand rounded-lg px-4 py-2.5 shadow-card hover:shadow-card-hover transition-all duration-300 text-left group"
-        >
-          <span className="font-body text-xs text-petra-fossil uppercase tracking-wider block">
-            Terrain
-          </span>
-          <span className="font-display text-sm text-petra-sepia group-hover:text-petra-sienna transition-colors">
-            {terrain ? "Elevation On" : "Elevation Off"}
-          </span>
-        </button>
-      </div>
+        {/* Filter Header */}
+        <div className="px-4 pt-3 pb-2 flex items-center justify-between shrink-0">
+          <button
+            onClick={() => setFilterOpen((o) => !o)}
+            className="flex items-center gap-1.5"
+          >
+            <svg
+              viewBox="0 0 20 20"
+              className={`w-3 h-3 text-petra-fossil/50 transition-transform duration-200 ${filterOpen ? "rotate-90" : ""}`}
+              fill="currentColor"
+            >
+              <path d="M6 4l8 6-8 6V4z" />
+            </svg>
+            <span className="font-body text-[10px] text-petra-fossil uppercase tracking-[0.15em]">
+              Filter by Group
+            </span>
+          </button>
+          {filterOpen && (
+            <div className="flex gap-1.5">
+              <button
+                onClick={selectAllGroups}
+                className="font-body text-[9px] text-petra-sienna hover:text-petra-sepia transition-colors uppercase tracking-wider px-1"
+              >
+                All
+              </button>
+              <button
+                onClick={clearAllGroups}
+                className="font-body text-[9px] text-petra-sienna hover:text-petra-sepia transition-colors uppercase tracking-wider px-1"
+              >
+                None
+              </button>
+            </div>
+          )}
+        </div>
 
-      {/* Specimen Count */}
-      <div className="absolute bottom-6 left-6 z-10 bg-petra-parchment/95 backdrop-blur-sm border border-petra-sand rounded-lg px-4 py-2.5 shadow-card">
-        <span className="font-body text-xs text-petra-fossil uppercase tracking-wider">
-          Specimens:{" "}
-          <span className="font-display text-petra-sienna font-bold">
-            {specimenCount.toLocaleString()}
-          </span>
-        </span>
+        {/* Group List */}
+        {filterOpen && (
+          <div className="overflow-y-auto flex-1 min-h-0 pb-2">
+            {GROUP_CONFIG.map((g) => {
+              const active = activeGroups.has(g.key);
+              const count = groupCounts[g.key] || 0;
+              const isExpanded = expandedGroup === g.key;
+              const families = familyMap[g.key] || [];
+              const hasFamilies = families.length > 1;
+
+              return (
+                <div key={g.key} className="px-3">
+                  {/* Group card row */}
+                  <div className="flex items-center gap-1.5 py-[3px]">
+                    {/* Card */}
+                    <button
+                      onClick={() => toggleGroup(g.key)}
+                      className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg border-2 transition-all duration-150 ${
+                        active
+                          ? "bg-white shadow-sm"
+                          : "bg-petra-bone/20 border-petra-sand/30 opacity-35 saturate-0"
+                      }`}
+                      style={active ? { borderColor: g.color } : {}}
+                    >
+                      <span className="text-base leading-none">{g.icon}</span>
+                      <span className="font-body text-[12px] text-petra-sepia">{g.label}</span>
+                      <span className="font-body text-[10px] text-petra-fossil/40 ml-auto">
+                        {count.toLocaleString()}
+                      </span>
+                    </button>
+
+                    {/* Expand button (outside card) */}
+                    {hasFamilies ? (
+                      <button
+                        onClick={() => setExpandedGroup(isExpanded ? null : g.key)}
+                        className="shrink-0 w-6 h-6 flex items-center justify-center rounded-md hover:bg-petra-bone/60 transition-colors"
+                      >
+                        <svg
+                          viewBox="0 0 16 16"
+                          className={`w-3 h-3 text-petra-fossil/40 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
+                          fill="currentColor"
+                        >
+                          <path d="M6 3l5 5-5 5V3z" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <div className="w-6" />
+                    )}
+                  </div>
+
+                  {/* Sub-family cards */}
+                  {isExpanded && (
+                    <div className="ml-5 border-l-2 border-petra-sand/30 pl-2 py-1 mb-1">
+                      {families.map((fam) => {
+                        const familyKey = `${g.key}::${fam.name}`;
+                        const familyActive = active && !excludedFamilies.has(familyKey);
+                        return (
+                          <button
+                            key={fam.name}
+                            onClick={() => {
+                              if (!active) {
+                                // Enable group but exclude all families except this one
+                                setActiveGroups((prev) => new Set([...prev, g.key]));
+                                setExcludedFamilies((prev) => {
+                                  const next = new Set(prev);
+                                  for (const f of families) {
+                                    const key = `${g.key}::${f.name}`;
+                                    if (f.name === fam.name) {
+                                      next.delete(key);
+                                    } else {
+                                      next.add(key);
+                                    }
+                                  }
+                                  return next;
+                                });
+                              } else {
+                                toggleFamily(g.key, fam.name);
+                              }
+                            }}
+                            className={`w-full flex items-center gap-2 px-2.5 py-1.5 my-[2px] rounded-md border transition-all duration-150 ${
+                              familyActive
+                                ? "bg-white border-petra-sand shadow-sm"
+                                : "bg-transparent border-petra-sand/20 opacity-30"
+                            }`}
+                          >
+                            <span
+                              className="shrink-0 w-2.5 h-2.5 rounded-sm"
+                              style={{ backgroundColor: familyActive ? g.color : "#D2B48C" }}
+                            />
+                            <span className="font-body text-[11px] text-petra-sepia truncate">
+                              {fam.name}
+                            </span>
+                            <span className="font-body text-[9px] text-petra-fossil/40 ml-auto shrink-0">
+                              {fam.count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* PBDB Attribution */}

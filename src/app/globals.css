@@ -72,18 +72,13 @@
   transition: border-color 0.3s, box-shadow 0.3s;
 }
 .petra-card-marker:hover .petra-card-inner {
-  border-color: #8B5A2B;
   box-shadow: 0 8px 24px rgba(62, 39, 35, 0.25);
 }
 .petra-card-abbr {
   font-family: "Inter", system-ui, sans-serif;
   font-size: 18px;
   font-weight: 700;
-  color: #3E2723;
   transition: color 0.3s;
-}
-.petra-card-marker:hover .petra-card-abbr {
-  color: #8B5A2B;
 }
 .petra-card-label {
   margin-top: 4px;
