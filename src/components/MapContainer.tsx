@@ -180,8 +180,12 @@ export default function MapContainer() {
     });
 
     m.on("load", () => {
-      fetch("/data/dinosaurs.geojson")
-        .then((res) => res.json())
+      fetch("/data/dinosaurs.geojson.gz")
+        .then((res) => {
+          const ds = new DecompressionStream("gzip");
+          const decompressed = res.body!.pipeThrough(ds);
+          return new Response(decompressed).json();
+        })
         .then((data) => {
           fullData.current = data;
           const total = data.features?.length ?? 0;
