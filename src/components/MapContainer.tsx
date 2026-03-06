@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import { Fossil } from "@/types/fossil";
+import { Fossil, getMajorPeriod } from "@/types/fossil";
 import ExcavationReport from "./ExcavationReport";
 import { getSilhouette } from "@/lib/dinoSilhouettes";
+import TimeSlider from "./TimeSlider";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
@@ -136,6 +137,13 @@ export default function MapContainer() {
   const [familyMap, setFamilyMap] = useState<FamilyMap>({});
   const [groupCounts, setGroupCounts] = useState<Record<string, number>>({});
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [timeMax, setTimeMax] = useState(252);
+  const [timeMin, setTimeMin] = useState(0);
+
+  const handleTimeChange = useCallback((max: number, min: number) => {
+    setTimeMax(max);
+    setTimeMin(min);
+  }, []);
 
   // Keep ref in sync so marker callbacks can access latest setter
   setSelectedFossilRef.current = setSelectedFossil;
@@ -441,6 +449,7 @@ export default function MapContainer() {
           commonName: props.commonName,
           coords,
           period: props.period,
+          majorPeriod: getMajorPeriod(parseFloat(props.max_ma || "0")),
           age: props.age,
           formation: props.formation,
           location: props.location,
@@ -480,8 +489,9 @@ export default function MapContainer() {
 
     const noGroupFilter = activeGroups.size === ALL_GROUPS.size;
     const noFamilyFilter = excludedFamilies.size === 0;
+    const noTimeFilter = timeMax >= 252 && timeMin <= 0;
 
-    if (noGroupFilter && noFamilyFilter) {
+    if (noGroupFilter && noFamilyFilter && noTimeFilter) {
       source.setData(data);
       setSpecimenCount(data.features?.length ?? 0);
     } else {
@@ -495,13 +505,19 @@ export default function MapContainer() {
             const key = `${props.group}::${family}`;
             if (excludedFamilies.has(key)) return false;
           }
+          if (!noTimeFilter) {
+            const fMax = parseFloat(props.max_ma);
+            const fMin = parseFloat(props.min_ma);
+            // Include if the fossil's time range overlaps with selected range
+            if (fMin > timeMax || fMax < timeMin) return false;
+          }
           return true;
         }),
       };
       source.setData(filtered);
       setSpecimenCount(filtered.features.length);
     }
-  }, [activeGroups, excludedFamilies]);
+  }, [activeGroups, excludedFamilies, timeMax, timeMin]);
 
   const toggleGroup = useCallback((group: string) => {
     setActiveGroups((prev) => {
@@ -582,6 +598,16 @@ export default function MapContainer() {
 
   const filterContent = (
     <>
+      {/* Time Slider */}
+      <div className="px-4 pt-3 pb-2 shrink-0">
+        <span className="font-body text-[10px] text-petra-fossil uppercase tracking-[0.15em] block mb-2">
+          Geological Time
+        </span>
+        <TimeSlider rangeMax={timeMax} rangeMin={timeMin} onChange={handleTimeChange} />
+      </div>
+
+      <div className="h-px bg-petra-sand/40 mx-4" />
+
       {/* Filter Header */}
       <div className="px-4 pt-3 pb-2 flex items-center justify-between shrink-0">
         <button

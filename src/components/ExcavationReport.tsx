@@ -135,9 +135,18 @@ export default function ExcavationReport({
                   <span className="font-body text-[10px] text-petra-sienna uppercase tracking-[0.2em] border border-petra-sienna/30 px-2 py-0.5 rounded">
                     Excavation Report
                   </span>
-                  <span className="font-body text-[10px] text-petra-fossil uppercase tracking-wider">
+                  <button
+                    onClick={() => {
+                      window.open(
+                        fossil.pbdbUrl,
+                        "pbdb_taxon",
+                        "width=800,height=600,scrollbars=yes,resizable=yes"
+                      );
+                    }}
+                    className="font-body text-[10px] text-petra-fossil uppercase tracking-wider hover:text-petra-sienna transition-colors cursor-pointer underline decoration-petra-fossil/30 hover:decoration-petra-sienna"
+                  >
                     PBDB-{fossil.id}
-                  </span>
+                  </button>
                   <span className="font-body text-[10px] text-white uppercase tracking-wider bg-petra-sienna/80 px-2 py-0.5 rounded">
                     {GROUP_LABELS[fossil.group] || fossil.group}
                   </span>
@@ -182,8 +191,13 @@ export default function ExcavationReport({
                     Geological Period
                   </span>
                   <span className="font-display text-2xl font-bold block mb-1 text-petra-sepia">
-                    {fossil.period}
+                    {fossil.majorPeriod}
                   </span>
+                  {fossil.period !== fossil.majorPeriod && (
+                    <span className="font-display text-sm block mb-1 text-petra-sepia/80 italic">
+                      {fossil.period}
+                    </span>
+                  )}
                   <span className="font-body text-sm text-petra-sepia/70">
                     {fossil.age}
                   </span>
@@ -223,27 +237,6 @@ export default function ExcavationReport({
                   label="Coordinates"
                   value={`${Math.abs(fossil.coords[1]).toFixed(1)}°${fossil.coords[1] >= 0 ? "N" : "S"}, ${Math.abs(fossil.coords[0]).toFixed(1)}°${fossil.coords[0] >= 0 ? "E" : "W"}`}
                 />
-              </div>
-
-              {/* PBDB Link */}
-              <div className="mb-8">
-                <button
-                  onClick={() => {
-                    window.open(
-                      fossil.pbdbUrl,
-                      "pbdb_taxon",
-                      "width=800,height=600,scrollbars=yes,resizable=yes"
-                    );
-                  }}
-                  className="inline-flex items-center gap-2 bg-petra-bone/60 border border-petra-sand hover:border-petra-sienna rounded px-4 py-2.5 transition-colors group cursor-pointer"
-                >
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 text-petra-fossil group-hover:text-petra-sienna transition-colors" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
-                  </svg>
-                  <span className="font-body text-xs text-petra-fossil group-hover:text-petra-sienna transition-colors uppercase tracking-wider">
-                    View on Paleobiology Database
-                  </span>
-                </button>
               </div>
 
               {/* Decorative footer */}

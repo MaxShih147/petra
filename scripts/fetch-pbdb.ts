@@ -159,6 +159,8 @@ async function main() {
         commonName: genus,
         period: r.early_interval,
         age: `${r.max_ma}–${r.min_ma} Ma`,
+        max_ma: String(r.max_ma),
+        min_ma: String(r.min_ma),
         formation: r.formation || "Unknown",
         location,
         group,
