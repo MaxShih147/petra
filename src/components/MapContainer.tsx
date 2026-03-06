@@ -135,6 +135,7 @@ export default function MapContainer() {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [familyMap, setFamilyMap] = useState<FamilyMap>({});
   const [groupCounts, setGroupCounts] = useState<Record<string, number>>({});
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   // Keep ref in sync so marker callbacks can access latest setter
   setSelectedFossilRef.current = setSelectedFossil;
@@ -579,12 +580,161 @@ export default function MapContainer() {
     else m.once("style.load", apply);
   }, [terrain]);
 
+  const filterContent = (
+    <>
+      {/* Filter Header */}
+      <div className="px-4 pt-3 pb-2 flex items-center justify-between shrink-0">
+        <button
+          onClick={() => setFilterOpen((o) => !o)}
+          className="flex items-center gap-1.5"
+        >
+          <svg
+            viewBox="0 0 20 20"
+            className={`w-3 h-3 text-petra-fossil/50 transition-transform duration-200 ${filterOpen ? "rotate-90" : ""}`}
+            fill="currentColor"
+          >
+            <path d="M6 4l8 6-8 6V4z" />
+          </svg>
+          <span className="font-body text-[10px] text-petra-fossil uppercase tracking-[0.15em]">
+            Filter by Group
+          </span>
+        </button>
+        {filterOpen && (
+          <div className="flex gap-1.5">
+            <button
+              onClick={selectAllGroups}
+              className="font-body text-[9px] text-petra-sienna hover:text-petra-sepia transition-colors uppercase tracking-wider px-1"
+            >
+              All
+            </button>
+            <button
+              onClick={clearAllGroups}
+              className="font-body text-[9px] text-petra-sienna hover:text-petra-sepia transition-colors uppercase tracking-wider px-1"
+            >
+              None
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Group List */}
+      {filterOpen && (
+        <div className="overflow-y-auto flex-1 min-h-0 pb-2">
+          {GROUP_CONFIG.map((g) => {
+            const active = activeGroups.has(g.key);
+            const count = groupCounts[g.key] || 0;
+            const isExpanded = expandedGroup === g.key;
+            const families = familyMap[g.key] || [];
+            const hasFamilies = families.length > 1;
+
+            return (
+              <div key={g.key} className="px-3">
+                {/* Group card row */}
+                <div className="flex items-center gap-1.5 py-[3px]">
+                  {/* Card */}
+                  <button
+                    onClick={() => toggleGroup(g.key)}
+                    className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg border-2 transition-all duration-150 ${
+                      active
+                        ? "bg-white shadow-sm"
+                        : "bg-petra-bone/20 border-petra-sand/30 opacity-75 saturate-0"
+                    }`}
+                    style={active ? { borderColor: g.color } : {}}
+                  >
+                    <img
+                      src={getSilhouette(g.key)}
+                      alt=""
+                      className={`shrink-0 ${g.key === "trace" || g.key === "unknown" ? "w-5 h-5" : "w-6 h-6"}`}
+                      style={{ filter: active ? `brightness(0) saturate(100%) opacity(0.7)` : undefined }}
+                    />
+                    <span className="font-body text-[12px] text-petra-sepia">{g.label}</span>
+                    <span className="font-body text-[10px] text-petra-fossil/40 ml-auto">
+                      {count.toLocaleString()}
+                    </span>
+                  </button>
+
+                  {/* Expand button (outside card) */}
+                  {hasFamilies ? (
+                    <button
+                      onClick={() => setExpandedGroup(isExpanded ? null : g.key)}
+                      className="shrink-0 w-6 h-6 flex items-center justify-center rounded-md hover:bg-petra-bone/60 transition-colors"
+                    >
+                      <svg
+                        viewBox="0 0 16 16"
+                        className={`w-3 h-3 text-petra-fossil/40 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
+                        fill="currentColor"
+                      >
+                        <path d="M6 3l5 5-5 5V3z" />
+                      </svg>
+                    </button>
+                  ) : (
+                    <div className="w-6" />
+                  )}
+                </div>
+
+                {/* Sub-family cards */}
+                {isExpanded && (
+                  <div className="ml-5 border-l-2 border-petra-sand/30 pl-2 py-1 mb-1">
+                    {families.map((fam) => {
+                      const familyKey = `${g.key}::${fam.name}`;
+                      const familyActive = active && !excludedFamilies.has(familyKey);
+                      return (
+                        <button
+                          key={fam.name}
+                          onClick={() => {
+                            if (!active) {
+                              setActiveGroups((prev) => new Set([...prev, g.key]));
+                              setExcludedFamilies((prev) => {
+                                const next = new Set(prev);
+                                for (const f of families) {
+                                  const key = `${g.key}::${f.name}`;
+                                  if (f.name === fam.name) {
+                                    next.delete(key);
+                                  } else {
+                                    next.add(key);
+                                  }
+                                }
+                                return next;
+                              });
+                            } else {
+                              toggleFamily(g.key, fam.name);
+                            }
+                          }}
+                          className={`w-full flex items-center gap-2 px-2.5 py-1.5 my-[2px] rounded-md border transition-all duration-150 ${
+                            familyActive
+                              ? "bg-white border-petra-sand shadow-sm"
+                              : "bg-transparent border-petra-sand/20 opacity-75"
+                          }`}
+                        >
+                          <span
+                            className="shrink-0 w-2.5 h-2.5 rounded-sm"
+                            style={{ backgroundColor: familyActive ? g.color : "#D2B48C" }}
+                          />
+                          <span className="font-body text-[11px] text-petra-sepia truncate">
+                            {fam.name}
+                          </span>
+                          <span className="font-body text-[9px] text-petra-fossil/40 ml-auto shrink-0">
+                            {fam.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
 
-      {/* Control Panel */}
-      <div className="absolute top-6 left-6 z-10 bg-petra-parchment/95 backdrop-blur-sm border border-petra-sand rounded-xl shadow-card overflow-hidden w-[250px] max-h-[calc(100vh-120px)] flex flex-col">
+      {/* === Desktop Control Panel (md+) === */}
+      <div className="hidden md:flex absolute top-6 left-6 z-10 bg-petra-parchment/95 backdrop-blur-sm border border-petra-sand rounded-xl shadow-card overflow-hidden w-[250px] max-h-[calc(100vh-120px)] flex-col">
         {/* Header */}
         <div className="px-4 pt-4 pb-2.5 flex items-start justify-between shrink-0">
           <div>
@@ -634,156 +784,98 @@ export default function MapContainer() {
           </span>
         </div>
 
-        {/* Filter Header */}
-        <div className="px-4 pt-3 pb-2 flex items-center justify-between shrink-0">
-          <button
-            onClick={() => setFilterOpen((o) => !o)}
-            className="flex items-center gap-1.5"
-          >
-            <svg
-              viewBox="0 0 20 20"
-              className={`w-3 h-3 text-petra-fossil/50 transition-transform duration-200 ${filterOpen ? "rotate-90" : ""}`}
-              fill="currentColor"
-            >
-              <path d="M6 4l8 6-8 6V4z" />
-            </svg>
-            <span className="font-body text-[10px] text-petra-fossil uppercase tracking-[0.15em]">
-              Filter by Group
-            </span>
-          </button>
-          {filterOpen && (
-            <div className="flex gap-1.5">
-              <button
-                onClick={selectAllGroups}
-                className="font-body text-[9px] text-petra-sienna hover:text-petra-sepia transition-colors uppercase tracking-wider px-1"
-              >
-                All
-              </button>
-              <button
-                onClick={clearAllGroups}
-                className="font-body text-[9px] text-petra-sienna hover:text-petra-sepia transition-colors uppercase tracking-wider px-1"
-              >
-                None
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Group List */}
-        {filterOpen && (
-          <div className="overflow-y-auto flex-1 min-h-0 pb-2">
-            {GROUP_CONFIG.map((g) => {
-              const active = activeGroups.has(g.key);
-              const count = groupCounts[g.key] || 0;
-              const isExpanded = expandedGroup === g.key;
-              const families = familyMap[g.key] || [];
-              const hasFamilies = families.length > 1;
-
-              return (
-                <div key={g.key} className="px-3">
-                  {/* Group card row */}
-                  <div className="flex items-center gap-1.5 py-[3px]">
-                    {/* Card */}
-                    <button
-                      onClick={() => toggleGroup(g.key)}
-                      className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg border-2 transition-all duration-150 ${
-                        active
-                          ? "bg-white shadow-sm"
-                          : "bg-petra-bone/20 border-petra-sand/30 opacity-35 saturate-0"
-                      }`}
-                      style={active ? { borderColor: g.color } : {}}
-                    >
-                      <img
-                        src={getSilhouette(g.key)}
-                        alt=""
-                        className={`shrink-0 ${g.key === "trace" || g.key === "unknown" ? "w-5 h-5" : "w-6 h-6"}`}
-                        style={{ filter: active ? `brightness(0) saturate(100%) opacity(0.7)` : undefined }}
-                      />
-                      <span className="font-body text-[12px] text-petra-sepia">{g.label}</span>
-                      <span className="font-body text-[10px] text-petra-fossil/40 ml-auto">
-                        {count.toLocaleString()}
-                      </span>
-                    </button>
-
-                    {/* Expand button (outside card) */}
-                    {hasFamilies ? (
-                      <button
-                        onClick={() => setExpandedGroup(isExpanded ? null : g.key)}
-                        className="shrink-0 w-6 h-6 flex items-center justify-center rounded-md hover:bg-petra-bone/60 transition-colors"
-                      >
-                        <svg
-                          viewBox="0 0 16 16"
-                          className={`w-3 h-3 text-petra-fossil/40 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
-                          fill="currentColor"
-                        >
-                          <path d="M6 3l5 5-5 5V3z" />
-                        </svg>
-                      </button>
-                    ) : (
-                      <div className="w-6" />
-                    )}
-                  </div>
-
-                  {/* Sub-family cards */}
-                  {isExpanded && (
-                    <div className="ml-5 border-l-2 border-petra-sand/30 pl-2 py-1 mb-1">
-                      {families.map((fam) => {
-                        const familyKey = `${g.key}::${fam.name}`;
-                        const familyActive = active && !excludedFamilies.has(familyKey);
-                        return (
-                          <button
-                            key={fam.name}
-                            onClick={() => {
-                              if (!active) {
-                                // Enable group but exclude all families except this one
-                                setActiveGroups((prev) => new Set([...prev, g.key]));
-                                setExcludedFamilies((prev) => {
-                                  const next = new Set(prev);
-                                  for (const f of families) {
-                                    const key = `${g.key}::${f.name}`;
-                                    if (f.name === fam.name) {
-                                      next.delete(key);
-                                    } else {
-                                      next.add(key);
-                                    }
-                                  }
-                                  return next;
-                                });
-                              } else {
-                                toggleFamily(g.key, fam.name);
-                              }
-                            }}
-                            className={`w-full flex items-center gap-2 px-2.5 py-1.5 my-[2px] rounded-md border transition-all duration-150 ${
-                              familyActive
-                                ? "bg-white border-petra-sand shadow-sm"
-                                : "bg-transparent border-petra-sand/20 opacity-30"
-                            }`}
-                          >
-                            <span
-                              className="shrink-0 w-2.5 h-2.5 rounded-sm"
-                              style={{ backgroundColor: familyActive ? g.color : "#D2B48C" }}
-                            />
-                            <span className="font-body text-[11px] text-petra-sepia truncate">
-                              {fam.name}
-                            </span>
-                            <span className="font-body text-[9px] text-petra-fossil/40 ml-auto shrink-0">
-                              {fam.count}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {filterContent}
       </div>
 
+      {/* === Mobile Top Bar (< md) === */}
+      <div className="md:hidden absolute top-0 left-0 right-0 z-10 safe-top">
+        <div className="flex items-center justify-between px-4 py-3 bg-petra-parchment/95 backdrop-blur-sm border-b border-petra-sand">
+          {/* Logo */}
+          <div>
+            <h1 className="font-display text-lg font-bold text-petra-sepia tracking-wide leading-none">
+              PETRA
+            </h1>
+            <p className="font-body text-[8px] text-petra-fossil tracking-[0.2em] uppercase">
+              The Fossil Atlas
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Specimen count */}
+            <span className="font-body text-[10px] text-petra-fossil">
+              <span className="font-display font-bold text-petra-sienna">{specimenCount.toLocaleString()}</span>
+            </span>
+
+            {/* Projection toggle */}
+            <button
+              onClick={() =>
+                setProjection((p) => (p === "globe" ? "mercator" : "globe"))
+              }
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-petra-bone/60"
+            >
+              {projection === "globe" ? (
+                <svg viewBox="0 0 20 20" className="w-4 h-4 text-petra-fossil" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <circle cx="10" cy="10" r="7.5" />
+                  <ellipse cx="10" cy="10" rx="3" ry="7.5" />
+                  <path d="M3 7.5h14M3 12.5h14" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 20 20" className="w-4 h-4 text-petra-fossil" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <rect x="2.5" y="4" width="15" height="12" rx="1" />
+                  <path d="M10 4v12M2.5 10h15" />
+                </svg>
+              )}
+            </button>
+
+            {/* Filter toggle */}
+            <button
+              onClick={() => setMobileFilterOpen((o) => !o)}
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-petra-bone/60 relative"
+            >
+              <svg viewBox="0 0 20 20" className="w-4 h-4 text-petra-fossil" fill="currentColor">
+                <path d="M2 4.5A.5.5 0 012.5 4h15a.5.5 0 010 1h-15A.5.5 0 012 4.5zm2 4A.5.5 0 014.5 8h11a.5.5 0 010 1h-11A.5.5 0 014 8.5zm3 4a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5z" />
+              </svg>
+              {(activeGroups.size < ALL_GROUPS.size || excludedFamilies.size > 0) && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-petra-sienna" />
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* === Mobile Filter Bottom Sheet (< md) === */}
+      {mobileFilterOpen && (
+        <>
+          <div
+            className="md:hidden absolute inset-0 z-20 bg-petra-sepia/20 backdrop-blur-[2px]"
+            onClick={() => setMobileFilterOpen(false)}
+          />
+          <div className="md:hidden absolute bottom-0 left-0 right-0 z-30 bg-petra-parchment/98 backdrop-blur-sm border-t border-petra-sand rounded-t-2xl shadow-report max-h-[70vh] flex flex-col safe-bottom">
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 rounded-full bg-petra-sand" />
+            </div>
+            {/* Specimen count bar */}
+            <div className="px-4 py-2 bg-petra-bone/40 border-y border-petra-sand/40 shrink-0">
+              <span className="font-body text-[11px] text-petra-fossil">
+                Showing{" "}
+                <span className="font-display font-bold text-petra-sienna">
+                  {specimenCount.toLocaleString()}
+                </span>
+                {(activeGroups.size < ALL_GROUPS.size || excludedFamilies.size > 0) && (
+                  <span className="text-petra-fossil/60"> / {totalCount.toLocaleString()}</span>
+                )}
+                {" "}specimens
+              </span>
+            </div>
+            {filterContent}
+          </div>
+        </>
+      )}
+
       {/* PBDB Attribution */}
-      <div className="absolute bottom-6 right-6 z-10 bg-petra-parchment/80 backdrop-blur-sm border border-petra-sand rounded px-3 py-1.5">
-        <span className="font-body text-[10px] text-petra-fossil">
+      <div className="absolute bottom-3 right-3 md:bottom-6 md:right-6 z-10 bg-petra-parchment/80 backdrop-blur-sm border border-petra-sand rounded px-2 py-1 md:px-3 md:py-1.5">
+        <span className="font-body text-[9px] md:text-[10px] text-petra-fossil">
           Data:{" "}
           <a
             href="https://paleobiodb.org"
@@ -791,9 +883,9 @@ export default function MapContainer() {
             rel="noopener noreferrer"
             className="underline hover:text-petra-sienna"
           >
-            Paleobiology Database
+            PBDB
           </a>{" "}
-          (CC BY 4.0)
+          <span className="hidden md:inline">(CC BY 4.0)</span>
         </span>
       </div>
 

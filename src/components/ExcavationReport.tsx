@@ -106,7 +106,8 @@ export default function ExcavationReport({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "100%", opacity: 0 }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="absolute top-0 right-0 z-30 h-full w-full max-w-md bg-petra-parchment border-l-2 border-petra-sand shadow-report overflow-y-auto"
+            className="absolute z-30 bg-petra-parchment shadow-report overflow-y-auto
+              inset-0 md:inset-auto md:top-0 md:right-0 md:h-full md:w-full md:max-w-md md:border-l-2 md:border-petra-sand"
           >
             {/* Paper texture overlay */}
             <div className="absolute inset-0 opacity-[0.04] pointer-events-none bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIj48ZmlsdGVyIGlkPSJhIj48ZmVUdXJidWxlbmNlIHR5cGU9ImZyYWN0YWxOb2lzZSIgYmFzZUZyZXF1ZW5jeT0iLjY1IiBzdGl0Y2hUaWxlcz0ic3RpdGNoIi8+PC9maWx0ZXI+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsdGVyPSJ1cmwoI2EpIi8+PC9zdmc+')] bg-repeat" />
@@ -127,7 +128,7 @@ export default function ExcavationReport({
               </svg>
             </button>
 
-            <div className="relative p-8 pt-6">
+            <div className="relative p-5 pt-4 md:p-8 md:pt-6">
               {/* Report Header */}
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -142,7 +143,7 @@ export default function ExcavationReport({
                   </span>
                 </div>
 
-                <h2 className="font-display text-3xl text-petra-sepia leading-tight mb-1">
+                <h2 className="font-display text-2xl md:text-3xl text-petra-sepia leading-tight mb-1">
                   <em>{fossil.name}</em>
                 </h2>
                 <p className="font-body text-sm text-petra-fossil">

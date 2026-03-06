@@ -15,6 +15,14 @@
   }
 }
 
+/* Safe area for notched devices */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* Mapbox style overrides for archaeological aesthetic */
 .mapboxgl-canvas {
   filter: sepia(15%) saturate(85%) brightness(98%);
