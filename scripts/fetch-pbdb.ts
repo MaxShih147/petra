@@ -166,7 +166,7 @@ async function main() {
         taxonomyFamily: r.family || "Unknown",
         taxonomyGenus: genus,
         taxonomySpecies: species,
-        pbdbUrl: `https://paleobiodb.org/classic/basicTaxonInfo?taxon_no=${r.occurrence_no}`,
+        pbdbUrl: `https://paleobiodb.org/navigator/#/occ/${r.occurrence_no}`,
       },
     });
   }
