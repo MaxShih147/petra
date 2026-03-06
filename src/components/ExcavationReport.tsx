@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Fossil } from "@/types/fossil";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDinoImage } from "@/lib/imageResolver";
+import { useI18n } from "@/lib/i18n";
 
 interface ExcavationReportProps {
   fossil: Fossil | null;
@@ -47,45 +48,31 @@ const GROUP_SILHOUETTE_COLORS: Record<string, string> = {
   unknown: "#999",
 };
 
-const GROUP_LABELS: Record<string, string> = {
-  theropod: "獸腳類 Theropoda",
-  sauropod: "蜥腳類 Sauropoda",
-  ceratopsian: "角龍類 Ceratopsia",
-  hadrosaur: "鴨嘴龍類 Hadrosauridae",
-  ankylosaur: "甲龍類 Ankylosauria",
-  stegosaur: "劍龍類 Stegosauria",
-  ornithopod: "鳥腳類 Ornithopoda",
-  pachycephalosaur: "厚頭龍類 Pachycephalosauria",
-  ornithomimosaur: "似鳥龍類 Ornithomimosauria",
-  oviraptorosaur: "偷蛋龍類 Oviraptorosauria",
-  bird: "鳥類 Aves",
-  trace: "足跡/蛋化石 Trace Fossil",
-  unknown: "未分類 Unclassified",
-};
 
 function getPeriodColor(period: string): string {
   return PERIOD_COLORS[period] || "#8B5A2B";
 }
 
-function formatTaxonomy(fossil: Fossil): string[] {
-  const parts: string[] = [];
+function getTaxonomyRows(fossil: Fossil): { key: string; value: string }[] {
+  const rows: { key: string; value: string }[] = [];
   if (fossil.taxonomyClass && fossil.taxonomyClass !== "Unknown")
-    parts.push(`Class: ${fossil.taxonomyClass}`);
+    rows.push({ key: "report.taxonomy.class", value: fossil.taxonomyClass });
   if (fossil.taxonomyOrder && fossil.taxonomyOrder !== "Unknown" && fossil.taxonomyOrder !== "NO_ORDER_SPECIFIED")
-    parts.push(`Order: ${fossil.taxonomyOrder}`);
+    rows.push({ key: "report.taxonomy.order", value: fossil.taxonomyOrder });
   if (fossil.taxonomyFamily && fossil.taxonomyFamily !== "Unknown" && fossil.taxonomyFamily !== "NO_FAMILY_SPECIFIED")
-    parts.push(`Family: ${fossil.taxonomyFamily}`);
+    rows.push({ key: "report.taxonomy.family", value: fossil.taxonomyFamily });
   if (fossil.taxonomyGenus)
-    parts.push(`Genus: ${fossil.taxonomyGenus}`);
+    rows.push({ key: "report.taxonomy.genus", value: fossil.taxonomyGenus });
   if (fossil.taxonomySpecies)
-    parts.push(`Species: ${fossil.taxonomySpecies}`);
-  return parts;
+    rows.push({ key: "report.taxonomy.species", value: fossil.taxonomySpecies });
+  return rows;
 }
 
 export default function ExcavationReport({
   fossil,
   onClose,
 }: ExcavationReportProps) {
+  const { t, tDino } = useI18n();
   return (
     <AnimatePresence>
       {fossil && (
@@ -133,7 +120,7 @@ export default function ExcavationReport({
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   <span className="font-body text-[10px] text-petra-sienna uppercase tracking-[0.2em] border border-petra-sienna/30 px-2 py-0.5 rounded">
-                    Excavation Report
+                    {t("report.label")}
                   </span>
                   <button
                     onClick={() => {
@@ -148,7 +135,7 @@ export default function ExcavationReport({
                     PBDB-{fossil.id}
                   </button>
                   <span className="font-body text-[10px] text-white uppercase tracking-wider bg-petra-sienna/80 px-2 py-0.5 rounded">
-                    {GROUP_LABELS[fossil.group] || fossil.group}
+                    {t(`group.${fossil.group}`)}
                   </span>
                 </div>
 
@@ -156,7 +143,7 @@ export default function ExcavationReport({
                   <em>{fossil.name}</em>
                 </h2>
                 <p className="font-body text-sm text-petra-fossil">
-                  &ldquo;{fossil.commonName}&rdquo;
+                  &ldquo;{tDino(fossil.commonName)}&rdquo;
                 </p>
               </div>
 
@@ -188,10 +175,10 @@ export default function ExcavationReport({
                   style={{ backgroundColor: getPeriodColor(fossil.period) + "88" }}
                 >
                   <span className="font-body text-[10px] text-petra-sepia/70 uppercase tracking-[0.2em] block mb-2">
-                    Geological Period
+                    {t("report.geologicalPeriod")}
                   </span>
                   <span className="font-display text-2xl font-bold block mb-1 text-petra-sepia">
-                    {fossil.majorPeriod}
+                    {t(`period.${fossil.majorPeriod}`)}
                   </span>
                   {fossil.period !== fossil.majorPeriod && (
                     <span className="font-display text-sm block mb-1 text-petra-sepia/80 italic">
@@ -212,16 +199,16 @@ export default function ExcavationReport({
               {/* Taxonomy Section */}
               <div className="mb-8">
                 <h3 className="font-display text-sm text-petra-sienna uppercase tracking-wider mb-3">
-                  Taxonomy
+                  {t("report.taxonomy")}
                 </h3>
                 <div className="bg-petra-bone/40 border border-petra-sand/50 rounded px-4 py-3 space-y-1">
-                  {formatTaxonomy(fossil).map((line, i) => (
+                  {getTaxonomyRows(fossil).map((row, i) => (
                     <div key={i} className="flex gap-2">
                       <span className="font-body text-[11px] text-petra-fossil w-16 shrink-0">
-                        {line.split(": ")[0]}:
+                        {t(row.key)}:
                       </span>
                       <span className="font-display text-[13px] text-petra-sepia font-medium italic">
-                        {line.split(": ")[1]}
+                        {row.value}
                       </span>
                     </div>
                   ))}
@@ -230,11 +217,11 @@ export default function ExcavationReport({
 
               {/* Data Grid */}
               <div className="grid grid-cols-2 gap-4 mb-8">
-                <DataField label="Formation" value={fossil.formation} />
-                <DataField label="Location" value={fossil.location} />
-                <DataField label="Age" value={fossil.age} />
+                <DataField label={t("report.formation")} value={fossil.formation} />
+                <DataField label={t("report.location")} value={fossil.location} />
+                <DataField label={t("report.age")} value={fossil.age} />
                 <DataField
-                  label="Coordinates"
+                  label={t("report.coordinates")}
                   value={`${Math.abs(fossil.coords[1]).toFixed(1)}°${fossil.coords[1] >= 0 ? "N" : "S"}, ${Math.abs(fossil.coords[0]).toFixed(1)}°${fossil.coords[0] >= 0 ? "E" : "W"}`}
                 />
               </div>
@@ -243,7 +230,7 @@ export default function ExcavationReport({
               <div className="flex items-center gap-3 pt-4 border-t border-petra-sand/60">
                 <div className="flex-1" />
                 <span className="font-display text-[10px] text-petra-fossil/50 italic tracking-wider">
-                  PETRA — The Fossil Atlas
+                  {t("app.footer")}
                 </span>
                 <div className="flex-1" />
               </div>
@@ -256,6 +243,7 @@ export default function ExcavationReport({
 }
 
 function ReportImage({ genus, group }: { genus: string; group: string }) {
+  const { t } = useI18n();
   const { url, loading } = useDinoImage(genus);
   const [imgLoaded, setImgLoaded] = useState(false);
   const groupColor = GROUP_SILHOUETTE_COLORS[group] || "#8B5A2B";
@@ -294,7 +282,7 @@ function ReportImage({ genus, group }: { genus: string; group: string }) {
           <svg viewBox="0 0 16 16" className="w-3 h-3" fill="currentColor">
             <path d="M4.002 3.5a.5.5 0 01.5-.5h7a.5.5 0 01.5.5v9a.5.5 0 01-.998.064L8 7.694 4.998 12.564A.5.5 0 014.002 12.5v-9z" />
           </svg>
-          Image: Wikimedia Commons
+          {t("report.imageCredit")}
         </a>
       </div>
     );
@@ -321,7 +309,7 @@ function ReportImage({ genus, group }: { genus: string; group: string }) {
         />
       </div>
       <span className="mt-1.5 block font-body text-[10px] text-petra-fossil/40 italic">
-        Illustration unavailable — silhouette shown
+        {t("report.imageFallback")}
       </span>
     </div>
   );

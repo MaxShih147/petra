@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useI18n } from "@/lib/i18n";
 
 // Major geological periods with ICS colors (oldest first)
 const GEO_PERIODS = [
@@ -26,6 +27,7 @@ export default function TimeSlider({
   rangeMin,
   onChange,
 }: TimeSliderProps) {
+  const { t } = useI18n();
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<"max" | "min" | null>(null);
 
@@ -144,7 +146,7 @@ export default function TimeSlider({
                 className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 font-body text-[7px] text-petra-sepia/80 font-medium whitespace-nowrap"
                 style={{ left: `${centerPct}%` }}
               >
-                {width > 15 ? p.name : p.abbr}
+                {width > 15 ? t(`period.${p.name}`) : p.abbr}
               </span>
             );
           })}
@@ -193,10 +195,10 @@ export default function TimeSlider({
       {/* Range labels */}
       <div className="flex justify-between mt-1.5">
         <span className="font-body text-[10px] text-petra-fossil">
-          {rangeMax.toFixed(0)} Ma
+          {rangeMax.toFixed(0)} {t("time.ma")}
         </span>
         <span className="font-body text-[10px] text-petra-fossil">
-          {rangeMin.toFixed(0)} Ma
+          {rangeMin.toFixed(0)} {t("time.ma")}
         </span>
       </div>
     </div>

@@ -7,6 +7,8 @@ import { Fossil, getMajorPeriod } from "@/types/fossil";
 import ExcavationReport from "./ExcavationReport";
 import { getSilhouette } from "@/lib/dinoSilhouettes";
 import TimeSlider from "./TimeSlider";
+import LangSwitch from "./LangSwitch";
+import { useI18n } from "@/lib/i18n";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
 
@@ -137,6 +139,7 @@ export default function MapContainer() {
   const [familyMap, setFamilyMap] = useState<FamilyMap>({});
   const [groupCounts, setGroupCounts] = useState<Record<string, number>>({});
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const { t, tDino, tFamily } = useI18n();
   const [timeMax, setTimeMax] = useState(252);
   const [timeMin, setTimeMin] = useState(0);
 
@@ -601,7 +604,7 @@ export default function MapContainer() {
       {/* Time Slider */}
       <div className="px-4 pt-3 pb-2 shrink-0">
         <span className="font-body text-[10px] text-petra-fossil uppercase tracking-[0.15em] block mb-2">
-          Geological Time
+          {t("time.slider")}
         </span>
         <TimeSlider rangeMax={timeMax} rangeMin={timeMin} onChange={handleTimeChange} />
       </div>
@@ -622,7 +625,7 @@ export default function MapContainer() {
             <path d="M6 4l8 6-8 6V4z" />
           </svg>
           <span className="font-body text-[10px] text-petra-fossil uppercase tracking-[0.15em]">
-            Filter by Group
+            {t("panel.filterByGroup")}
           </span>
         </button>
         {filterOpen && (
@@ -631,13 +634,13 @@ export default function MapContainer() {
               onClick={selectAllGroups}
               className="font-body text-[9px] text-petra-sienna hover:text-petra-sepia transition-colors uppercase tracking-wider px-1"
             >
-              All
+              {t("panel.filterAll")}
             </button>
             <button
               onClick={clearAllGroups}
               className="font-body text-[9px] text-petra-sienna hover:text-petra-sepia transition-colors uppercase tracking-wider px-1"
             >
-              None
+              {t("panel.filterNone")}
             </button>
           </div>
         )}
@@ -673,7 +676,7 @@ export default function MapContainer() {
                       className={`shrink-0 ${g.key === "trace" || g.key === "unknown" ? "w-5 h-5" : "w-6 h-6"}`}
                       style={{ filter: active ? `brightness(0) saturate(100%) opacity(0.7)` : undefined }}
                     />
-                    <span className="font-body text-[12px] text-petra-sepia">{g.label}</span>
+                    <span className="font-body text-[12px] text-petra-sepia">{t(`group.${g.key}`)}</span>
                     <span className="font-body text-[10px] text-petra-fossil/40 ml-auto">
                       {count.toLocaleString()}
                     </span>
@@ -737,7 +740,7 @@ export default function MapContainer() {
                             style={{ backgroundColor: familyActive ? g.color : "#D2B48C" }}
                           />
                           <span className="font-body text-[11px] text-petra-sepia truncate">
-                            {fam.name}
+                            {tFamily(fam.name)}
                           </span>
                           <span className="font-body text-[9px] text-petra-fossil/40 ml-auto shrink-0">
                             {fam.count}
@@ -765,17 +768,19 @@ export default function MapContainer() {
         <div className="px-4 pt-4 pb-2.5 flex items-start justify-between shrink-0">
           <div>
             <h1 className="font-display text-xl font-bold text-petra-sepia tracking-wide leading-none">
-              PETRA
+              {t("panel.title")}
             </h1>
             <p className="font-body text-[9px] text-petra-fossil tracking-[0.2em] uppercase mt-0.5">
-              The Fossil Atlas
+              {t("app.subtitle")}
             </p>
           </div>
-          <button
-            onClick={() =>
-              setProjection((p) => (p === "globe" ? "mercator" : "globe"))
-            }
-            className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-petra-bone/60 transition-colors"
+          <div className="flex items-center gap-1">
+            <LangSwitch />
+            <button
+              onClick={() =>
+                setProjection((p) => (p === "globe" ? "mercator" : "globe"))
+              }
+              className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-petra-bone/60 transition-colors"
             title={`Switch to ${projection === "globe" ? "2D Mercator" : "3D Globe"}`}
           >
             {projection === "globe" ? (
@@ -794,19 +799,20 @@ export default function MapContainer() {
               {projection === "globe" ? "Globe" : "Flat"}
             </span>
           </button>
+          </div>
         </div>
 
         {/* Specimen count bar */}
         <div className="px-4 py-2 bg-petra-bone/40 border-y border-petra-sand/40 shrink-0">
           <span className="font-body text-[11px] text-petra-fossil">
-            Showing{" "}
+            {t("panel.showing")}{" "}
             <span className="font-display font-bold text-petra-sienna">
               {specimenCount.toLocaleString()}
             </span>
             {(activeGroups.size < ALL_GROUPS.size || excludedFamilies.size > 0) && (
               <span className="text-petra-fossil/60"> / {totalCount.toLocaleString()}</span>
             )}
-            {" "}specimens
+            {" "}{t("panel.specimens")}
           </span>
         </div>
 
@@ -819,10 +825,10 @@ export default function MapContainer() {
           {/* Logo */}
           <div>
             <h1 className="font-display text-lg font-bold text-petra-sepia tracking-wide leading-none">
-              PETRA
+              {t("panel.title")}
             </h1>
             <p className="font-body text-[8px] text-petra-fossil tracking-[0.2em] uppercase">
-              The Fossil Atlas
+              {t("app.subtitle")}
             </p>
           </div>
 
@@ -831,6 +837,8 @@ export default function MapContainer() {
             <span className="font-body text-[10px] text-petra-fossil">
               <span className="font-display font-bold text-petra-sienna">{specimenCount.toLocaleString()}</span>
             </span>
+
+            <LangSwitch />
 
             {/* Projection toggle */}
             <button
@@ -884,14 +892,14 @@ export default function MapContainer() {
             {/* Specimen count bar */}
             <div className="px-4 py-2 bg-petra-bone/40 border-y border-petra-sand/40 shrink-0">
               <span className="font-body text-[11px] text-petra-fossil">
-                Showing{" "}
+                {t("panel.showing")}{" "}
                 <span className="font-display font-bold text-petra-sienna">
                   {specimenCount.toLocaleString()}
                 </span>
                 {(activeGroups.size < ALL_GROUPS.size || excludedFamilies.size > 0) && (
                   <span className="text-petra-fossil/60"> / {totalCount.toLocaleString()}</span>
                 )}
-                {" "}specimens
+                {" "}{t("panel.specimens")}
               </span>
             </div>
             {filterContent}
@@ -902,7 +910,7 @@ export default function MapContainer() {
       {/* PBDB Attribution */}
       <div className="absolute bottom-3 right-3 md:bottom-6 md:right-6 z-10 bg-petra-parchment/80 backdrop-blur-sm border border-petra-sand rounded px-2 py-1 md:px-3 md:py-1.5">
         <span className="font-body text-[9px] md:text-[10px] text-petra-fossil">
-          Data:{" "}
+          {t("panel.data")}{" "}
           <a
             href="https://paleobiodb.org"
             target="_blank"
