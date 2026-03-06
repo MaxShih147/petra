@@ -6,6 +6,7 @@ const PBDB_URL =
 
 interface PBDBRecord {
   occurrence_no: number;
+  accepted_no: number;
   accepted_name: string;
   accepted_rank: string;
   identified_rank?: string;
@@ -166,7 +167,7 @@ async function main() {
         taxonomyFamily: r.family || "Unknown",
         taxonomyGenus: genus,
         taxonomySpecies: species,
-        pbdbUrl: `https://paleobiodb.org/navigator/#/occ/${r.occurrence_no}`,
+        pbdbUrl: `https://paleobiodb.org/classic/checkTaxonInfo?taxon_no=${r.accepted_no}&is_real_user=1`,
       },
     });
   }
