@@ -72,7 +72,7 @@ export default function ExcavationReport({
   fossil,
   onClose,
 }: ExcavationReportProps) {
-  const { t, tDino } = useI18n();
+  const { t, tDino, tStage, tAge } = useI18n();
   return (
     <AnimatePresence>
       {fossil && (
@@ -182,11 +182,11 @@ export default function ExcavationReport({
                   </span>
                   {fossil.period !== fossil.majorPeriod && (
                     <span className="font-display text-sm block mb-1 text-petra-sepia/80 italic">
-                      {fossil.period}
+                      {tStage(fossil.period)}
                     </span>
                   )}
                   <span className="font-body text-sm text-petra-sepia/70">
-                    {fossil.age}
+                    {tAge(fossil.age)}
                   </span>
                   {/* Frame corners */}
                   <div className="absolute top-1 left-1 w-4 h-4 border-t-2 border-l-2 border-petra-sienna/30" />
