@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Fossil } from "@/types/fossil";
 import { motion, AnimatePresence } from "framer-motion";
-import { useDinoImage } from "@/lib/imageResolver";
+import { useDinoImage, type ImageSource } from "@/lib/imageResolver";
 import { useI18n } from "@/lib/i18n";
 
 interface ExcavationReportProps {
@@ -242,11 +242,32 @@ export default function ExcavationReport({
   );
 }
 
+const IMAGE_CREDIT: Record<ImageSource, { label: string; getUrl: (genus: string) => string }> = {
+  wikipedia: {
+    label: "report.credit.wikipedia",
+    getUrl: (genus) => `https://en.wikipedia.org/wiki/${encodeURIComponent(genus)}`,
+  },
+  commons: {
+    label: "report.credit.commons",
+    getUrl: (genus) => `https://commons.wikimedia.org/wiki/Category:${encodeURIComponent(genus)}`,
+  },
+  inaturalist: {
+    label: "report.credit.inaturalist",
+    getUrl: (genus) => `https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(genus)}`,
+  },
+  phylopic: {
+    label: "report.credit.phylopic",
+    getUrl: () => "https://www.phylopic.org/",
+  },
+  none: { label: "", getUrl: () => "" },
+};
+
 function ReportImage({ genus, group }: { genus: string; group: string }) {
   const { t } = useI18n();
-  const { url, loading } = useDinoImage(genus);
+  const { url, source, loading } = useDinoImage(genus, group);
   const [imgLoaded, setImgLoaded] = useState(false);
   const groupColor = GROUP_SILHOUETTE_COLORS[group] || "#8B5A2B";
+  const isPhyloPic = source === "phylopic";
 
   if (loading) {
     return (
@@ -256,11 +277,12 @@ function ReportImage({ genus, group }: { genus: string; group: string }) {
     );
   }
 
-  if (url) {
+  if (url && source !== "none") {
+    const credit = IMAGE_CREDIT[source];
     return (
       <div className="mb-6">
-        <div className="relative overflow-hidden rounded-lg border border-petra-sand bg-petra-bone/30">
-          {!imgLoaded && (
+        <div className={`relative overflow-hidden rounded-lg border border-petra-sand ${isPhyloPic ? "h-48 flex items-center justify-center bg-petra-bone/30" : "bg-petra-bone/30"}`}>
+          {!imgLoaded && !isPhyloPic && (
             <div className="h-48 bg-petra-bone animate-pulse" />
           )}
           <motion.img
@@ -270,11 +292,11 @@ function ReportImage({ genus, group }: { genus: string; group: string }) {
             animate={{ opacity: imgLoaded ? 1 : 0 }}
             transition={{ duration: 0.4 }}
             onLoad={() => setImgLoaded(true)}
-            className="petra-report-image w-full max-h-52 object-cover"
+            className={isPhyloPic ? "max-h-36 max-w-[60%] object-contain opacity-60" : "petra-report-image w-full max-h-52 object-cover"}
           />
         </div>
         <a
-          href={`https://en.wikipedia.org/wiki/${encodeURIComponent(genus)}`}
+          href={credit.getUrl(genus)}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-1.5 inline-flex items-center gap-1 font-body text-[10px] text-petra-fossil/60 hover:text-petra-sienna transition-colors"
@@ -282,13 +304,13 @@ function ReportImage({ genus, group }: { genus: string; group: string }) {
           <svg viewBox="0 0 16 16" className="w-3 h-3" fill="currentColor">
             <path d="M4.002 3.5a.5.5 0 01.5-.5h7a.5.5 0 01.5.5v9a.5.5 0 01-.998.064L8 7.694 4.998 12.564A.5.5 0 014.002 12.5v-9z" />
           </svg>
-          {t("report.imageCredit")}
+          {t(credit.label)}
         </a>
       </div>
     );
   }
 
-  // Fallback: PhyloPic silhouette
+  // Final fallback: group silhouette
   return (
     <div className="mb-6">
       <div className="petra-report-image-fallback relative overflow-hidden rounded-lg border border-petra-sand h-48 flex items-center justify-center">

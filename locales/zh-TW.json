@@ -39,6 +39,10 @@
   "report.coordinates": "座標",
   "report.viewPBDB": "在古生物資料庫查看",
   "report.imageCredit": "圖片來源：維基共享資源",
+  "report.credit.wikipedia": "圖片來源：維基百科",
+  "report.credit.commons": "圖片來源：維基共享資源",
+  "report.credit.inaturalist": "照片來源：iNaturalist (CC)",
+  "report.credit.phylopic": "輪廓圖：PhyloPic",
   "report.imageFallback": "暫無復原圖——以輪廓圖代替",
 
   "period.Triassic": "三疊紀",

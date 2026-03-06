@@ -39,6 +39,10 @@
   "report.coordinates": "Coordinates",
   "report.viewPBDB": "View on Paleobiology Database",
   "report.imageCredit": "Image: Wikimedia Commons",
+  "report.credit.wikipedia": "Image: Wikipedia",
+  "report.credit.commons": "Image: Wikimedia Commons",
+  "report.credit.inaturalist": "Photo: iNaturalist (CC)",
+  "report.credit.phylopic": "Silhouette: PhyloPic",
   "report.imageFallback": "Illustration unavailable — silhouette shown",
 
   "period.Triassic": "Triassic",
