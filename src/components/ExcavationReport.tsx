@@ -227,11 +227,15 @@ export default function ExcavationReport({
 
               {/* PBDB Link */}
               <div className="mb-8">
-                <a
-                  href={fossil.pbdbUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-petra-bone/60 border border-petra-sand hover:border-petra-sienna rounded px-4 py-2.5 transition-colors group"
+                <button
+                  onClick={() => {
+                    window.open(
+                      fossil.pbdbUrl,
+                      "pbdb_taxon",
+                      "width=800,height=600,scrollbars=yes,resizable=yes"
+                    );
+                  }}
+                  className="inline-flex items-center gap-2 bg-petra-bone/60 border border-petra-sand hover:border-petra-sienna rounded px-4 py-2.5 transition-colors group cursor-pointer"
                 >
                   <svg viewBox="0 0 24 24" className="w-4 h-4 text-petra-fossil group-hover:text-petra-sienna transition-colors" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
@@ -239,7 +243,7 @@ export default function ExcavationReport({
                   <span className="font-body text-xs text-petra-fossil group-hover:text-petra-sienna transition-colors uppercase tracking-wider">
                     View on Paleobiology Database
                   </span>
-                </a>
+                </button>
               </div>
 
               {/* Decorative footer */}
