@@ -8,6 +8,7 @@ import ExcavationReport from "./ExcavationReport";
 import { getSilhouette } from "@/lib/dinoSilhouettes";
 import TimeSlider from "./TimeSlider";
 import LangSwitch from "./LangSwitch";
+import AboutPanel from "./AboutPanel";
 import { useI18n } from "@/lib/i18n";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
@@ -139,6 +140,7 @@ export default function MapContainer() {
   const [familyMap, setFamilyMap] = useState<FamilyMap>({});
   const [groupCounts, setGroupCounts] = useState<Record<string, number>>({});
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"explore" | "about">("explore");
   const { t, tDino, tFamily } = useI18n();
   const [timeMax, setTimeMax] = useState(252);
   const [timeMin, setTimeMin] = useState(0);
@@ -659,11 +661,10 @@ export default function MapContainer() {
             return (
               <div key={g.key} className="px-3">
                 {/* Group card row */}
-                <div className="flex items-center gap-1.5 py-[3px]">
-                  {/* Card */}
+                <div className="py-[3px]">
                   <button
                     onClick={() => toggleGroup(g.key)}
-                    className={`flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg border-2 transition-all duration-150 ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border-2 transition-all duration-150 ${
                       active
                         ? "bg-white shadow-sm"
                         : "bg-petra-bone/20 border-petra-sand/30 opacity-75 saturate-0"
@@ -680,25 +681,17 @@ export default function MapContainer() {
                     <span className="font-body text-[10px] text-petra-fossil/40 ml-auto">
                       {count.toLocaleString()}
                     </span>
-                  </button>
-
-                  {/* Expand button (outside card) */}
-                  {hasFamilies ? (
-                    <button
-                      onClick={() => setExpandedGroup(isExpanded ? null : g.key)}
-                      className="shrink-0 w-6 h-6 flex items-center justify-center rounded-md hover:bg-petra-bone/60 transition-colors"
-                    >
+                    {hasFamilies && (
                       <svg
                         viewBox="0 0 16 16"
-                        className={`w-3 h-3 text-petra-fossil/40 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
+                        className={`shrink-0 w-3 h-3 text-petra-fossil/40 transition-transform duration-200 ${isExpanded ? "rotate-90" : ""}`}
                         fill="currentColor"
+                        onClick={(e) => { e.stopPropagation(); setExpandedGroup(isExpanded ? null : g.key); }}
                       >
                         <path d="M6 3l5 5-5 5V3z" />
                       </svg>
-                    </button>
-                  ) : (
-                    <div className="w-6" />
-                  )}
+                    )}
+                  </button>
                 </div>
 
                 {/* Sub-family cards */}
@@ -765,58 +758,97 @@ export default function MapContainer() {
       {/* === Desktop Control Panel (md+) === */}
       <div className="hidden md:flex absolute top-6 left-6 z-10 bg-petra-parchment/95 backdrop-blur-sm border border-petra-sand rounded-xl shadow-card overflow-hidden w-[250px] max-h-[calc(100vh-120px)] flex-col">
         {/* Header */}
-        <div className="px-4 pt-4 pb-2.5 flex items-start justify-between shrink-0">
-          <div>
-            <h1 className="font-display text-xl font-bold text-petra-sepia tracking-wide leading-none">
-              {t("panel.title")}
-            </h1>
-            <p className="font-body text-[9px] text-petra-fossil tracking-[0.2em] uppercase mt-0.5">
-              {t("app.subtitle")}
-            </p>
-          </div>
-          <div className="flex items-center gap-1">
-            <LangSwitch />
-            <button
-              onClick={() =>
-                setProjection((p) => (p === "globe" ? "mercator" : "globe"))
-              }
-              className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-petra-bone/60 transition-colors"
-            title={`Switch to ${projection === "globe" ? "2D Mercator" : "3D Globe"}`}
+        <div className="px-4 pt-4 pb-2 shrink-0">
+          <h1 className="font-display text-xl font-bold text-petra-sepia tracking-wide leading-none">
+            {t("panel.title")}
+          </h1>
+          <p className="font-body text-[9px] text-petra-fossil tracking-[0.2em] uppercase mt-0.5">
+            {t("app.subtitle")}
+          </p>
+        </div>
+
+        {/* Tab Bar */}
+        <div className="px-3 pb-1 shrink-0 flex gap-1">
+          <button
+            onClick={() => setActiveTab("explore")}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md font-body text-[11px] transition-colors ${
+              activeTab === "explore"
+                ? "bg-petra-bone text-petra-sepia font-medium shadow-sm"
+                : "text-petra-fossil/60 hover:text-petra-fossil hover:bg-petra-bone/40"
+            }`}
           >
-            {projection === "globe" ? (
-              <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 text-petra-fossil" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <circle cx="10" cy="10" r="7.5" />
-                <ellipse cx="10" cy="10" rx="3" ry="7.5" />
-                <path d="M3 7.5h14M3 12.5h14" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 text-petra-fossil" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="2.5" y="4" width="15" height="12" rx="1" />
-                <path d="M10 4v12M2.5 10h15" />
-              </svg>
-            )}
-            <span className="font-body text-[11px] text-petra-fossil">
-              {projection === "globe" ? "Globe" : "Flat"}
-            </span>
+            <svg viewBox="0 0 16 16" className="w-3 h-3" fill="currentColor">
+              <path d="M11.742 10.344a6.5 6.5 0 10-1.397 1.398h-.001l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85zm-5.242.156a5 5 0 110-10 5 5 0 010 10z" />
+            </svg>
+            {t("panel.tab.explore")}
           </button>
-          </div>
+          <button
+            onClick={() => setActiveTab("about")}
+            className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md font-body text-[11px] transition-colors ${
+              activeTab === "about"
+                ? "bg-petra-bone text-petra-sepia font-medium shadow-sm"
+                : "text-petra-fossil/60 hover:text-petra-fossil hover:bg-petra-bone/40"
+            }`}
+          >
+            <svg viewBox="0 0 16 16" className="w-3 h-3" fill="currentColor">
+              <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1.25 1.25 0 110 2.5 1.25 1.25 0 010-2.5zM6.5 7h3v5h-3V7z" />
+            </svg>
+            {t("panel.tab.about")}
+          </button>
         </div>
 
-        {/* Specimen count bar */}
-        <div className="px-4 py-2 bg-petra-bone/40 border-y border-petra-sand/40 shrink-0">
-          <span className="font-body text-[11px] text-petra-fossil">
-            {t("panel.showing")}{" "}
-            <span className="font-display font-bold text-petra-sienna">
-              {specimenCount.toLocaleString()}
-            </span>
-            {(activeGroups.size < ALL_GROUPS.size || excludedFamilies.size > 0) && (
-              <span className="text-petra-fossil/60"> / {totalCount.toLocaleString()}</span>
-            )}
-            {" "}{t("panel.specimens")}
-          </span>
-        </div>
+        <div className="h-px bg-petra-sand/40 shrink-0" />
 
-        {filterContent}
+        {/* Tab Content */}
+        {activeTab === "explore" ? (
+          <>
+            {/* Specimen count + projection toggle bar */}
+            <div className="px-4 py-2 bg-petra-bone/40 border-b border-petra-sand/40 shrink-0 flex items-center justify-between">
+              <span className="font-body text-[11px] text-petra-fossil">
+                {t("panel.showing")}{" "}
+                <span className="font-display font-bold text-petra-sienna">
+                  {specimenCount.toLocaleString()}
+                </span>
+                {(activeGroups.size < ALL_GROUPS.size || excludedFamilies.size > 0) && (
+                  <span className="text-petra-fossil/60"> / {totalCount.toLocaleString()}</span>
+                )}
+                {" "}{t("panel.specimens")}
+              </span>
+              <button
+                onClick={() =>
+                  setProjection((p) => (p === "globe" ? "mercator" : "globe"))
+                }
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-petra-bone/60 transition-colors"
+                title={`Switch to ${projection === "globe" ? "2D Mercator" : "3D Globe"}`}
+              >
+                {projection === "globe" ? (
+                  <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 text-petra-fossil" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="10" cy="10" r="7.5" />
+                    <ellipse cx="10" cy="10" rx="3" ry="7.5" />
+                    <path d="M3 7.5h14M3 12.5h14" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 20 20" className="w-3.5 h-3.5 text-petra-fossil" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="2.5" y="4" width="15" height="12" rx="1" />
+                    <path d="M10 4v12M2.5 10h15" />
+                  </svg>
+                )}
+                <span className="font-body text-[10px] text-petra-fossil">
+                  {projection === "globe" ? "Globe" : "Flat"}
+                </span>
+              </button>
+            </div>
+
+            {filterContent}
+          </>
+        ) : (
+          <AboutPanel />
+        )}
+
+        {/* Footer — Lang switch only */}
+        <div className="shrink-0 border-t border-petra-sand/40 px-3 py-2 flex items-center justify-center bg-petra-bone/30">
+          <LangSwitch />
+        </div>
       </div>
 
       {/* === Mobile Top Bar (< md) === */}
@@ -833,11 +865,6 @@ export default function MapContainer() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Specimen count */}
-            <span className="font-body text-[10px] text-petra-fossil">
-              <span className="font-display font-bold text-petra-sienna">{specimenCount.toLocaleString()}</span>
-            </span>
-
             <LangSwitch />
 
             {/* Projection toggle */}
@@ -863,7 +890,7 @@ export default function MapContainer() {
 
             {/* Filter toggle */}
             <button
-              onClick={() => setMobileFilterOpen((o) => !o)}
+              onClick={() => { setActiveTab("explore"); setMobileFilterOpen((o) => !o); }}
               className="w-8 h-8 flex items-center justify-center rounded-lg bg-petra-bone/60 relative"
             >
               <svg viewBox="0 0 20 20" className="w-4 h-4 text-petra-fossil" fill="currentColor">
@@ -873,36 +900,53 @@ export default function MapContainer() {
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-petra-sienna" />
               )}
             </button>
+
+            {/* About toggle */}
+            <button
+              onClick={() => { setActiveTab("about"); setMobileFilterOpen((o) => !o); }}
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-petra-bone/60"
+            >
+              <svg viewBox="0 0 16 16" className="w-4 h-4 text-petra-fossil" fill="currentColor">
+                <path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 2.5a1.25 1.25 0 110 2.5 1.25 1.25 0 010-2.5zM6.5 7h3v5h-3V7z" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* === Mobile Filter Bottom Sheet (< md) === */}
+      {/* === Mobile Bottom Sheet (< md) === */}
       {mobileFilterOpen && (
         <>
           <div
             className="md:hidden absolute inset-0 z-20 bg-petra-sepia/20 backdrop-blur-[2px]"
             onClick={() => setMobileFilterOpen(false)}
           />
-          <div className="md:hidden absolute bottom-0 left-0 right-0 z-30 bg-petra-parchment/98 backdrop-blur-sm border-t border-petra-sand rounded-t-2xl shadow-report max-h-[70vh] flex flex-col safe-bottom">
+          <div className="md:hidden absolute bottom-0 left-0 right-0 z-30 bg-petra-parchment/90 backdrop-blur-lg border-t border-petra-sand rounded-t-2xl shadow-report max-h-[70vh] flex flex-col safe-bottom">
             {/* Handle */}
             <div className="flex justify-center pt-3 pb-1 shrink-0">
               <div className="w-10 h-1 rounded-full bg-petra-sand" />
             </div>
-            {/* Specimen count bar */}
-            <div className="px-4 py-2 bg-petra-bone/40 border-y border-petra-sand/40 shrink-0">
-              <span className="font-body text-[11px] text-petra-fossil">
-                {t("panel.showing")}{" "}
-                <span className="font-display font-bold text-petra-sienna">
-                  {specimenCount.toLocaleString()}
-                </span>
-                {(activeGroups.size < ALL_GROUPS.size || excludedFamilies.size > 0) && (
-                  <span className="text-petra-fossil/60"> / {totalCount.toLocaleString()}</span>
-                )}
-                {" "}{t("panel.specimens")}
-              </span>
-            </div>
-            {filterContent}
+
+            {activeTab === "explore" ? (
+              <>
+                {/* Specimen count bar */}
+                <div className="px-4 py-2 border-y border-petra-sand/40 shrink-0">
+                  <span className="font-body text-[11px] text-petra-fossil">
+                    {t("panel.showing")}{" "}
+                    <span className="font-display font-bold text-petra-sienna">
+                      {specimenCount.toLocaleString()}
+                    </span>
+                    {(activeGroups.size < ALL_GROUPS.size || excludedFamilies.size > 0) && (
+                      <span className="text-petra-fossil/60"> / {totalCount.toLocaleString()}</span>
+                    )}
+                    {" "}{t("panel.specimens")}
+                  </span>
+                </div>
+                {filterContent}
+              </>
+            ) : (
+              <AboutPanel />
+            )}
           </div>
         </>
       )}

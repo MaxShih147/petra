@@ -10,6 +10,17 @@
   "panel.showing": "Showing",
   "panel.specimens": "specimens",
   "panel.data": "Data:",
+  "panel.tab.explore": "Explore",
+  "panel.tab.about": "About",
+
+  "about.tagline": "An interactive 3D atlas of dinosaur fossil discoveries worldwide.",
+  "about.dataTitle": "Data Source",
+  "about.dataDesc": "Fossil occurrence data from the Paleobiology Database (PBDB), licensed under CC BY 4.0.",
+  "about.builtWith": "Built With",
+  "about.authorTitle": "Author",
+  "about.authorName": "Max Shih",
+  "about.sourceCode": "Source Code",
+  "about.version": "v1.0",
 
   "group.theropod": "Theropoda",
   "group.sauropod": "Sauropoda",

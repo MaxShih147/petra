@@ -10,6 +10,17 @@
   "panel.showing": "顯示",
   "panel.specimens": "筆標本",
   "panel.data": "資料：",
+  "panel.tab.explore": "探索",
+  "panel.tab.about": "關於",
+
+  "about.tagline": "一個互動式 3D 恐龍化石世界地圖。",
+  "about.dataTitle": "資料來源",
+  "about.dataDesc": "化石產地資料取自古生物資料庫 (PBDB)，以 CC BY 4.0 授權釋出。",
+  "about.builtWith": "技術棧",
+  "about.authorTitle": "作者",
+  "about.authorName": "Max Shih",
+  "about.sourceCode": "原始碼",
+  "about.version": "v1.0",
 
   "group.theropod": "獸腳類",
   "group.sauropod": "蜥腳類",
