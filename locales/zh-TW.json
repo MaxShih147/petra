@@ -64,5 +64,8 @@
   "period.Quaternary": "第四紀",
 
   "time.ma": "百萬年前",
-  "time.slider": "時間範圍"
+  "time.slider": "時間範圍",
+
+  "kidMode.toggle": "切換兒童模式",
+  "kidMode.label": "兒童"
 }

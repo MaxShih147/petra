@@ -64,5 +64,8 @@
   "period.Quaternary": "Quaternary",
 
   "time.ma": "Ma",
-  "time.slider": "Time Range"
+  "time.slider": "Time Range",
+
+  "kidMode.toggle": "Toggle Kid Mode",
+  "kidMode.label": "Kid"
 }

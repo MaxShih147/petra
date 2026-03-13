@@ -5,6 +5,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { Fossil, getMajorPeriod } from "@/types/fossil";
 import ExcavationReport from "./ExcavationReport";
+import DinoCard from "./DinoCard";
 import { getSilhouette } from "@/lib/dinoSilhouettes";
 import TimeSlider from "./TimeSlider";
 import LangSwitch from "./LangSwitch";
@@ -141,6 +142,7 @@ export default function MapContainer() {
   const [groupCounts, setGroupCounts] = useState<Record<string, number>>({});
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"explore" | "about">("explore");
+  const [kidMode, setKidMode] = useState(false);
   const { t, tDino, tFamily } = useI18n();
   const [timeMax, setTimeMax] = useState(252);
   const [timeMin, setTimeMin] = useState(0);
@@ -845,9 +847,25 @@ export default function MapContainer() {
           <AboutPanel />
         )}
 
-        {/* Footer — Lang switch only */}
-        <div className="shrink-0 border-t border-petra-sand/40 px-3 py-2 flex items-center justify-center bg-petra-bone/30">
+        {/* Footer toolbar */}
+        <div className="shrink-0 border-t border-petra-sand/40 px-3 py-2 flex items-center justify-between bg-petra-bone/30">
           <LangSwitch />
+          <button
+            onClick={() => setKidMode((k) => !k)}
+            className={`flex items-center gap-1 px-2 py-1 rounded-md transition-colors ${
+              kidMode
+                ? "bg-amber-100 border border-amber-300 text-amber-700"
+                : "hover:bg-petra-bone/60 text-petra-fossil"
+            }`}
+            title={t("kidMode.toggle")}
+          >
+            <svg viewBox="0 0 20 20" className="w-3.5 h-3.5" fill="currentColor">
+              <path d="M10 2L12.5 7.5H18L13.5 11L15.5 17L10 13.5L4.5 17L6.5 11L2 7.5H7.5L10 2Z" />
+            </svg>
+            <span className="font-body text-[10px]">
+              {t("kidMode.label")}
+            </span>
+          </button>
         </div>
       </div>
 
@@ -866,6 +884,18 @@ export default function MapContainer() {
 
           <div className="flex items-center gap-2">
             <LangSwitch />
+
+            {/* Kid mode toggle */}
+            <button
+              onClick={() => setKidMode((k) => !k)}
+              className={`w-8 h-8 flex items-center justify-center rounded-lg ${
+                kidMode ? "bg-amber-100 border border-amber-300" : "bg-petra-bone/60"
+              }`}
+            >
+              <svg viewBox="0 0 20 20" className={`w-4 h-4 ${kidMode ? "text-amber-600" : "text-petra-fossil"}`} fill="currentColor">
+                <path d="M10 2L12.5 7.5H18L13.5 11L15.5 17L10 13.5L4.5 17L6.5 11L2 7.5H7.5L10 2Z" />
+              </svg>
+            </button>
 
             {/* Projection toggle */}
             <button
@@ -968,7 +998,11 @@ export default function MapContainer() {
       </div>
 
       {/* Excavation Report Side Panel */}
-      <ExcavationReport fossil={selectedFossil} onClose={handleCloseReport} />
+      {kidMode ? (
+        <DinoCard fossil={selectedFossil} onClose={handleCloseReport} />
+      ) : (
+        <ExcavationReport fossil={selectedFossil} onClose={handleCloseReport} />
+      )}
     </div>
   );
 }
